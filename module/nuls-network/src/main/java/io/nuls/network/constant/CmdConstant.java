@@ -43,6 +43,10 @@ public interface CmdConstant {
      * 广播消息
      */
     String CMD_NW_BROADCAST = "nw_broadcast";
+    /**
+     * 通过IP地址发送消息
+     */
+    String CMD_NW_SEND_BY_IPS = "nw_sendByIps";
 
     String CMD_NW_CROSS_RANDOM_BROADCAST = "nw_crossRandomBroadcast";
     /**
@@ -54,7 +58,7 @@ public interface CmdConstant {
      * 获取网络信息
      */
     String CMD_NW_INFO = "nw_info";
-
+    String CMD_NW_EXTRANET_IP = "nw_extranet_ip";
     /**
      * 查看网络节点
      */
@@ -115,4 +119,6 @@ public interface CmdConstant {
      * 模块统一消息处理器RPC接口
      */
      String CMD_MSG_PROCESS = "msgProcess";
+
+    String CMD_DIRECT_CONNECT_NODES = "nw_addDirectConnect";
 }
