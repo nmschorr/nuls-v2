@@ -127,7 +127,12 @@
         "handler": "ContractStopAgentProcessorV1"
       }
     ],
-    "validMsgs": [],
+    "validMsgs": [
+      {
+        "name": "io.nuls.network.model.message.ConsensusIdentitiesMsg",
+        "protocolCmd": "pocIdentity",
+        "handlers": "ConsensusIdentityProcessorV1"
+      }],
     "invalidTxs": "",
     "invalidMsgs": ""
   }
