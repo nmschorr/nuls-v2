@@ -30,6 +30,7 @@ import io.nuls.base.data.CoinData;
 import io.nuls.base.data.CoinFrom;
 import io.nuls.base.data.CoinTo;
 import io.nuls.base.data.Transaction;
+import io.nuls.core.constant.TxType;
 import io.nuls.core.core.annotation.Autowired;
 import io.nuls.core.core.annotation.Component;
 import io.nuls.core.model.BigIntegerUtils;
@@ -322,6 +323,9 @@ public class CoinDataValidator {
             batchValidateTxMap.put(txHash, txHash);
             return ValidateResult.getSuccess();
         }
+        if (!validateTxAmount(coinData, tx.getType())) {
+            return ValidateResult.getResult(LedgerErrorCode.TX_AMOUNT_INVALIDATE, new String[]{txHash});
+        }
         List<CoinFrom> coinFroms = coinData.getFrom();
         List<CoinTo> coinTos = coinData.getTo();
 
@@ -550,6 +554,9 @@ public class CoinDataValidator {
             batchValidateTxSet.add(txHash);
             return ValidateResult.getSuccess();
         }
+        if (!validateTxAmount(coinData, tx.getType())) {
+            return ValidateResult.getResult(LedgerErrorCode.TX_AMOUNT_INVALIDATE, new String[]{txHash});
+        }
         List<CoinFrom> coinFroms = coinData.getFrom();
         List<CoinTo> coinTos = coinData.getTo();
         byte[] txNonce = LedgerUtil.getNonceByTx(tx);
@@ -577,7 +584,7 @@ public class CoinDataValidator {
     private boolean isValidateFreezeTx(byte locked, AccountState accountState, BigInteger fromAmount, byte[] fromNonce) {
         boolean isValidate = false;
         //解锁交易，校验是否存在该笔交易
-        if (locked == -1) {
+        if (locked == LedgerConstant.UNLOCKED_TIME) {
             //时间解锁
             List<FreezeLockTimeState> list = accountState.getFreezeLockTimeStates();
             for (FreezeLockTimeState freezeLockTimeState : list) {
@@ -587,7 +594,7 @@ public class CoinDataValidator {
                     break;
                 }
             }
-        } else if (locked == 1) {
+        } else if (locked == LedgerConstant.UNLOCKED_HEIGHT) {
             //高度解锁
             List<FreezeHeightState> list = accountState.getFreezeHeightStates();
             for (FreezeHeightState freezeHeightState : list) {
@@ -620,6 +627,9 @@ public class CoinDataValidator {
         if (null == coinData) {
             //例如黄牌交易，直接返回
             return ValidateResult.getSuccess();
+        }
+        if (!validateTxAmount(coinData, tx.getType())) {
+            return ValidateResult.getResult(LedgerErrorCode.TX_AMOUNT_INVALIDATE, new String[]{txHash});
         }
         /*
          * 先校验nonce值是否正常
@@ -742,6 +752,62 @@ public class CoinDataValidator {
             }
         }
         chainsBatchValidateTxMap.remove(txHash);
+        return true;
+    }
+
+    /**
+     * @param coinData
+     * @param txType
+     * @return
+     */
+    public boolean validateTxAmount(CoinData coinData, int txType) {
+        if (txType == TxType.CONTRACT_TOKEN_CROSS_TRANSFER || txType == TxType.COIN_BASE) {
+            return true;
+        }
+        Map<String, BigInteger> assetMap = new HashMap<>();
+        List<String> assetKeys = new ArrayList<>();
+        List<CoinFrom> froms = coinData.getFrom();
+        for (CoinFrom from : froms) {
+            String assetKey = from.getAssetsChainId() + "_" + from.getAssetsId();
+            if (null == assetMap.get(assetKey)) {
+                assetMap.put(assetKey, BigInteger.ZERO);
+                assetKeys.add(assetKey);
+            }
+            String fromKey = assetKey + "from";
+            if (null == assetMap.get(fromKey)) {
+                assetMap.put(fromKey, from.getAmount());
+            } else {
+                BigInteger fromAmount = assetMap.get(fromKey).add(from.getAmount());
+                assetMap.put(fromKey, fromAmount);
+            }
+        }
+        List<CoinTo> tos = coinData.getTo();
+        for (CoinTo to : tos) {
+            String assetKey = to.getAssetsChainId() + "_" + to.getAssetsId();
+            if (null == assetMap.get(assetKey)) {
+                assetMap.put(assetKey, BigInteger.ZERO);
+                assetKeys.add(assetKey);
+            }
+            String toKey = assetKey + "to";
+            if (null == assetMap.get(toKey)) {
+                assetMap.put(toKey, to.getAmount());
+            } else {
+                BigInteger fromAmount = assetMap.get(toKey).add(to.getAmount());
+                assetMap.put(toKey, fromAmount);
+            }
+        }
+        BigInteger assetKeyFrom, assetKeyTo;
+        for (String assetKey : assetKeys) {
+            assetKeyFrom = assetMap.get(assetKey + "from");
+            assetKeyTo = assetMap.get(assetKey + "to");
+            if (null == assetKeyFrom || null == assetKeyTo) {
+                continue;
+            }
+            if (BigIntegerUtils.isLessThan(assetKeyFrom, assetKeyTo)) {
+                LoggerUtil.COMMON_LOG.error("fromAmount is less than to amount");
+                return false;
+            }
+        }
         return true;
     }
 }

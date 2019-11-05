@@ -41,12 +41,15 @@ import io.nuls.chain.model.tx.RegisterChainAndAssetTransaction;
 import io.nuls.chain.rpc.call.RpcService;
 import io.nuls.chain.service.AssetService;
 import io.nuls.chain.service.ChainService;
+import io.nuls.chain.util.ChainManagerUtil;
 import io.nuls.chain.util.LoggerUtil;
+import io.nuls.chain.util.TxUtil;
 import io.nuls.core.constant.BaseConstant;
 import io.nuls.core.constant.ErrorCode;
 import io.nuls.core.core.annotation.Autowired;
 import io.nuls.core.core.annotation.Component;
 import io.nuls.core.exception.NulsRuntimeException;
+import io.nuls.core.model.FormatValidUtils;
 import io.nuls.core.model.StringUtils;
 import io.nuls.core.parse.JSONUtils;
 import io.nuls.core.rpc.model.*;
@@ -159,10 +162,18 @@ public class ChainCmd extends BaseChainCmd {
             /* 取消int assetId = seqService.createAssetId(blockChain.getChainId());*/
             Asset asset = new Asset();
             asset.map2pojo(params);
+            if (asset.getDecimalPlaces() < Integer.valueOf(nulsChainConfig.getAssetDecimalPlacesMin()) || asset.getDecimalPlaces() > Integer.valueOf(nulsChainConfig.getAssetDecimalPlacesMax())) {
+                return failed(CmErrorCode.ERROR_ASSET_DECIMALPLACES);
+            }
+            if (!FormatValidUtils.validTokenNameOrSymbol(asset.getSymbol())) {
+                return failed(CmErrorCode.ERROR_ASSET_SYMBOL);
+            }
+            if (!FormatValidUtils.validTokenNameOrSymbol(asset.getAssetName())) {
+                return failed(CmErrorCode.ERROR_ASSET_NAME);
+            }
             asset.setChainId(blockChain.getChainId());
-            asset.setDepositNuls(new BigInteger(nulsChainConfig.getAssetDepositNuls()));
-            int rateToPercent = new BigDecimal(nulsChainConfig.getAssetDepositNulsDestroyRate()).multiply(BigDecimal.valueOf(100)).intValue();
-            asset.setDestroyNuls(new BigInteger(nulsChainConfig.getAssetDepositNuls()).multiply(BigInteger.valueOf(rateToPercent)).divide(BigInteger.valueOf(100)));
+            asset.setDepositNuls(nulsChainConfig.getAssetDepositNuls());
+            asset.setDestroyNuls(nulsChainConfig.getAssetDestroyNuls());
             asset.setAvailable(true);
             BlockChain dbChain = chainService.getChain(blockChain.getChainId());
             if (null != dbChain && dbChain.isDelete()) {
@@ -179,7 +190,12 @@ public class ChainCmd extends BaseChainCmd {
             }
             /* 组装交易发送 (Send transaction) */
             Transaction tx = new RegisterChainAndAssetTransaction();
-            tx.setTxData(blockChain.parseToTransaction(asset));
+            if (ChainManagerUtil.getVersion(CmRuntimeInfo.getMainIntChainId()) > 2) {
+                tx.setTxData(TxUtil.parseChainToTxV3(blockChain, asset).serialize());
+            } else {
+                tx.setTxData(TxUtil.parseChainToTx(blockChain, asset).serialize());
+            }
+
             tx.setTime(NulsDateUtils.getCurrentTimeSeconds());
             AccountBalance accountBalance = new AccountBalance(null, null);
             ErrorCode ldErrorCode = rpcService.getCoinData(String.valueOf(params.get("address")), accountBalance);
@@ -273,10 +289,18 @@ public class ChainCmd extends BaseChainCmd {
             /* 取消int assetId = seqService.createAssetId(blockChain.getChainId());*/
             Asset asset = new Asset();
             asset.map2pojo(params);
+            if (asset.getDecimalPlaces() < Integer.valueOf(nulsChainConfig.getAssetDecimalPlacesMin()) || asset.getDecimalPlaces() > Integer.valueOf(nulsChainConfig.getAssetDecimalPlacesMax())) {
+                return failed(CmErrorCode.ERROR_ASSET_DECIMALPLACES);
+            }
+            if (!FormatValidUtils.validTokenNameOrSymbol(asset.getSymbol())) {
+                return failed(CmErrorCode.ERROR_ASSET_SYMBOL);
+            }
+            if (!FormatValidUtils.validTokenNameOrSymbol(asset.getAssetName())) {
+                return failed(CmErrorCode.ERROR_ASSET_NAME);
+            }
             asset.setChainId(blockChain.getChainId());
-            asset.setDepositNuls(new BigInteger(nulsChainConfig.getAssetDepositNuls()));
-            int rateToPercent = new BigDecimal(nulsChainConfig.getAssetDepositNulsDestroyRate()).multiply(BigDecimal.valueOf(100)).intValue();
-            asset.setDestroyNuls(new BigInteger(nulsChainConfig.getAssetDepositNuls()).multiply(BigInteger.valueOf(rateToPercent)).divide(BigInteger.valueOf(100)));
+            asset.setDepositNuls(nulsChainConfig.getAssetDepositNuls());
+            asset.setDestroyNuls(nulsChainConfig.getAssetDestroyNuls());
             asset.setAvailable(true);
             BlockChain dbChain = chainService.getChain(blockChain.getChainId());
             if (null == dbChain) {
@@ -294,7 +318,11 @@ public class ChainCmd extends BaseChainCmd {
             }
             /* 组装交易发送 (Send transaction) */
             Transaction tx = new RegisterChainAndAssetTransaction();
-            tx.setTxData(blockChain.parseToTransaction(asset));
+            if (ChainManagerUtil.getVersion(CmRuntimeInfo.getMainIntChainId()) > 2) {
+                tx.setTxData(TxUtil.parseChainToTxV3(blockChain, asset).serialize());
+            } else {
+                tx.setTxData(TxUtil.parseChainToTx(blockChain, asset).serialize());
+            }
             tx.setTime(NulsDateUtils.getCurrentTimeSeconds());
             AccountBalance accountBalance = new AccountBalance(null, null);
             ErrorCode ldErrorCode = rpcService.getCoinData(String.valueOf(params.get("address")), accountBalance);

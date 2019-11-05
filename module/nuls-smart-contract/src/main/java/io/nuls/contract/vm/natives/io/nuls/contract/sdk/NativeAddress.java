@@ -30,14 +30,13 @@ import io.nuls.contract.vm.*;
 import io.nuls.contract.vm.code.MethodCode;
 import io.nuls.contract.vm.exception.ErrorException;
 import io.nuls.contract.vm.natives.NativeMethod;
-import io.nuls.contract.vm.program.ProgramCall;
-import io.nuls.contract.vm.program.ProgramInternalCall;
-import io.nuls.contract.vm.program.ProgramResult;
-import io.nuls.contract.vm.program.ProgramTransfer;
+import io.nuls.contract.vm.program.*;
 import io.nuls.contract.vm.program.impl.ProgramInvoke;
+import org.ethereum.vm.DataWord;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.Map;
 
 import static io.nuls.contract.vm.natives.NativeMethod.NOT_SUPPORT_NATIVE;
 import static io.nuls.contract.vm.natives.NativeMethod.SUPPORT_NATIVE;
@@ -250,7 +249,7 @@ public class NativeAddress {
         return array;
     }
 
-    private static ProgramResult call(String address, String methodName, String methodDesc, String[][] args, BigInteger value, Frame frame) {
+    public static ProgramResult call(String address, String methodName, String methodDesc, String[][] args, BigInteger value, Frame frame) {
         if (value.compareTo(BigInteger.ZERO) < 0) {
             throw new ErrorException(String.format("amount less than zero, value=%s", value), frame.vm.getGasUsed(), null);
         }
@@ -287,6 +286,14 @@ public class NativeAddress {
 
         frame.vm.getInternalCalls().add(programInternalCall);
 
+        // add by pierre at 2019-10-31 - 需要协议升级
+        Map<DataWord, DataWord> contractState = frame.vm.heap.contractState();
+        for (Map.Entry<DataWord, DataWord> entry : contractState.entrySet()) {
+            DataWord key1 = entry.getKey();
+            DataWord value1 = entry.getValue();
+            frame.vm.getRepository().addStorageRow(programInvoke.getContractAddress(), key1, value1);
+        }
+        // end code by pierre
         ProgramResult programResult = frame.vm.getProgramExecutor().callProgramExecutor().call(programCall);
 
         frame.vm.addGasUsed(programResult.getGasUsed());
@@ -345,20 +352,7 @@ public class NativeAddress {
     private static Result isContract(MethodCode methodCode, MethodArgs methodArgs, Frame frame) {
         ObjectRef addressRef = methodArgs.objectRef;
         String address = frame.heap.runToString(addressRef);
-        byte[] contractAddress = frame.vm.getProgramInvoke().getContractAddress();
-        byte[] itself = NativeAddress.toBytes(address);
-
-        boolean verify = false;
-        do {
-            if (Arrays.equals(contractAddress, itself)) {
-                verify = true;
-                break;
-            }
-            if (frame.heap.existContract(itself)) {
-                verify = true;
-                break;
-            }
-        } while (false);
+        boolean verify = isContract(NativeAddress.toBytes(address), frame);
         Result result = NativeMethod.result(methodCode, verify, frame);
         return result;
     }
@@ -383,6 +377,17 @@ public class NativeAddress {
         } catch (Exception e) {
             throw new RuntimeException("address error", e);
         }
+    }
+
+    public static boolean isContract(byte[] address, Frame frame) {
+        byte[] contractAddress = frame.vm.getProgramInvoke().getContractAddress();
+        if (Arrays.equals(contractAddress, address)) {
+            return true;
+        }
+        if (frame.heap.existContract(address)) {
+            return true;
+        }
+        return false;
     }
 
     public static boolean validAddress(int chainId, String str) {

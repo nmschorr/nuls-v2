@@ -30,6 +30,7 @@ import io.nuls.core.core.annotation.Autowired;
 import io.nuls.core.core.annotation.Component;
 import io.nuls.core.rpc.util.NulsDateUtils;
 import io.nuls.ledger.constant.LedgerConstant;
+import io.nuls.ledger.constant.LedgerErrorCode;
 import io.nuls.ledger.model.AccountBalance;
 import io.nuls.ledger.model.Uncfd2CfdKey;
 import io.nuls.ledger.model.ValidateResult;
@@ -80,6 +81,8 @@ public class TransactionServiceImpl implements TransactionService {
     FreezeStateService freezeStateService;
     @Autowired
     ChainAssetsService chainAssetsService;
+    @Autowired
+    AssetRegMngService assetRegMngService;
     /**
      * 缓存一个区块的nonce值
      */
@@ -104,6 +107,9 @@ public class TransactionServiceImpl implements TransactionService {
             //例如黄牌交易，直接返回
             return ValidateResult.getSuccess();
         }
+        if (!coinDataValidator.validateTxAmount(coinData, transaction.getType())) {
+            return ValidateResult.getResult(LedgerErrorCode.TX_AMOUNT_INVALIDATE, new String[]{transaction.getHash().toHex()});
+        }
         /*未确认交易的校验*/
         Map<String, TxUnconfirmed> accountsMap = new ConcurrentHashMap<>(8);
         byte[] txNonce = LedgerUtil.getNonceByTx(transaction);
@@ -123,19 +129,8 @@ public class TransactionServiceImpl implements TransactionService {
         return ValidateResult.getSuccess();
     }
 
-    private void dealAssetAddressIndex(Map<String, List<String>> assetAddressIndex, int chainId, int assetId, String address) {
-        String assetIndexKey = chainId + "-" + assetId;
-        List<String> addressList = null;
-        if (null == assetAddressIndex.get(assetIndexKey)) {
-            addressList = new ArrayList<>();
-            assetAddressIndex.put(assetIndexKey, addressList);
-        } else {
-            addressList = assetAddressIndex.get(assetIndexKey);
-        }
-        addressList.add(address);
-    }
 
-    private boolean confirmBlockTxProcess(long blockHeight,int addressChainId, List<Transaction> txList,
+    private boolean confirmBlockTxProcess(long blockHeight, int addressChainId, List<Transaction> txList,
                                           Map<String, AccountBalance> updateAccounts, List<Uncfd2CfdKey> delUncfd2CfdKeys,
                                           Map<String, Integer> clearUncfs, Map<String, List<String>> assetAddressIndex) throws Exception {
         for (Transaction transaction : txList) {
@@ -164,10 +159,15 @@ public class TransactionServiceImpl implements TransactionService {
                         return false;
                     }
                 }
+                if(assetRegMngService.isContractAsset(from.getAssetsChainId(),from.getAssetsId())){
+                    //账本非跨链交易如果收到from是合约资产的，报错
+                    LoggerUtil.logger(addressChainId).info("hash={} asset={}-{}  from is contract asset", txHash,from.getAssetsChainId(),from.getAssetsId());
+                    continue;
+                }
                 boolean process;
                 AccountBalance accountBalance = getAccountBalance(addressChainId, from, updateAccounts, address);
                 //归集链下有多少种类资产，资产下有多少地址
-                dealAssetAddressIndex(assetAddressIndex, from.getAssetsChainId(), from.getAssetsId(), address);
+                LedgerUtil.dealAssetAddressIndex(assetAddressIndex, from.getAssetsChainId(), from.getAssetsId(), address);
                 if (from.getLocked() == 0) {
                     AmountNonce amountNonce = new AmountNonce(from.getNonce(), nonce8Bytes, from.getAmount());
                     accountBalance.getPreAccountState().getNonces().add(amountNonce);
@@ -202,9 +202,14 @@ public class TransactionServiceImpl implements TransactionService {
                         return false;
                     }
                 }
+                if(assetRegMngService.isContractAsset(to.getAssetsChainId(),to.getAssetsId())){
+                    //账本非跨链交易如果收到to是合约资产的,不进行入账
+                    LoggerUtil.logger(addressChainId).info("hash={} asset={}-{} rec contract asset", txHash,to.getAssetsChainId(),to.getAssetsId());
+                    continue;
+                }
                 AccountBalance accountBalance = getAccountBalance(addressChainId, to, updateAccounts, address);
                 //归集链下有多少种类资产，资产下有多少地址
-                dealAssetAddressIndex(assetAddressIndex, to.getAssetsChainId(), to.getAssetsId(), address);
+                LedgerUtil.dealAssetAddressIndex(assetAddressIndex, to.getAssetsChainId(), to.getAssetsId(), address);
                 if (to.getLockTime() == 0) {
                     //非锁定交易处理
                     commontTransactionProcessor.processToCoinData(to, accountBalance.getNowAccountState());
@@ -248,7 +253,7 @@ public class TransactionServiceImpl implements TransactionService {
             Map<String, Integer> clearUncfs = new HashMap<>(txList.size());
             Map<String, List<String>> assetAddressIndex = new HashMap<>(4);
             try {
-                if (!confirmBlockTxProcess(blockHeight,addressChainId, txList, updateAccounts, delUncfd2CfdKeys, clearUncfs, assetAddressIndex)) {
+                if (!confirmBlockTxProcess(blockHeight, addressChainId, txList, updateAccounts, delUncfd2CfdKeys, clearUncfs, assetAddressIndex)) {
                     return false;
                 }
                 //整体交易的处理
