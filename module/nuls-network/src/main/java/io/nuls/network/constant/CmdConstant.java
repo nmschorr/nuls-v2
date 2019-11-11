@@ -125,4 +125,6 @@ public interface CmdConstant {
      String CMD_MSG_PROCESS = "msgProcess";
 
     String CMD_DIRECT_CONNECT_NODES = "nw_addDirectConnect";
+    String CMD_ADD_BUSINESS_GROUP_IPS = "nw_addIps";
+    String CMD_REMOVE_BUSINESS_GROUP_IPS = "nw_removeIps";
 }
