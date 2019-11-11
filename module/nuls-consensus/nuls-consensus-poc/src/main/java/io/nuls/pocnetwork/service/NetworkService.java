@@ -25,6 +25,8 @@
 package io.nuls.pocnetwork.service;
 
 
+import java.util.List;
+
 /**
  * @author lanjinsheng
  * @date 2019/10/17
@@ -33,6 +35,10 @@ package io.nuls.pocnetwork.service;
 public interface NetworkService {
 
     boolean connectPeer(int chainId, String nodeId);
+
+    boolean addIps(int chainId, String groupFlag, List<String> ips);
+
+    boolean removeIps(int chainId, String groupFlag, List<String> ips);
 
     boolean sendIdentityMessage(int chainId, String peerNodeId, byte[] pubKey);
 

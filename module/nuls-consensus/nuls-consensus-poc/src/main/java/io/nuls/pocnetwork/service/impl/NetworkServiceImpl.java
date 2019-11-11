@@ -17,6 +17,7 @@ import io.nuls.poc.model.bo.Chain;
 import io.nuls.poc.utils.manager.ChainManager;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -50,7 +51,46 @@ public class NetworkServiceImpl implements NetworkService {
         }
         return false;
     }
-
+    @Override
+    public boolean addIps(int chainId, String groupFlag, List<String> ips) {
+        Chain chain = chainManager.getChainMap().get(chainId);
+        try {
+            Map<String, Object> params = new HashMap<>(5);
+            params.put(Constants.CHAIN_ID, chainId);
+            params.put("module", ModuleE.CS.abbr);
+            params.put("groupFlag", groupFlag);
+            params.put("ips", ips);
+            Response response = ResponseMessageProcessor.requestAndResponse(ModuleE.NW.abbr, "nw_addIps", params);
+            if (response.isSuccess()) {
+                Map data = (Map) ((Map) response.getResponseData()).get("nw_addIps");
+                return Boolean.valueOf(data.get("value").toString());
+            }
+        } catch (Exception e) {
+            chain.getLogger().error("", e);
+            return false;
+        }
+        return false;
+    }
+    @Override
+    public boolean removeIps(int chainId, String groupFlag, List<String> ips) {
+        Chain chain = chainManager.getChainMap().get(chainId);
+        try {
+            Map<String, Object> params = new HashMap<>(5);
+            params.put(Constants.CHAIN_ID, chainId);
+            params.put("module", ModuleE.CS.abbr);
+            params.put("groupFlag", groupFlag);
+            params.put("ips", ips);
+            Response response = ResponseMessageProcessor.requestAndResponse(ModuleE.NW.abbr, "nw_removeIps", params);
+            if (response.isSuccess()) {
+                Map data = (Map) ((Map) response.getResponseData()).get("nw_removeIps");
+                return Boolean.valueOf(data.get("value").toString());
+            }
+        } catch (Exception e) {
+            chain.getLogger().error("", e);
+            return false;
+        }
+        return false;
+    }
     private String getSelfNodeId(int chainId) {
         Chain chain = chainManager.getChainMap().get(chainId);
         try {

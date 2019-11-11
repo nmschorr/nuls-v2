@@ -56,14 +56,16 @@ import io.nuls.core.rpc.info.Constants;
 import io.nuls.core.rpc.model.ModuleE;
 import io.nuls.core.rpc.model.message.Response;
 import io.nuls.core.rpc.netty.processor.ResponseMessageProcessor;
+import io.nuls.poc.model.bo.Chain;
+import io.nuls.poc.utils.manager.ChainManager;
 import io.nuls.pocnetwork.constant.NetworkCmdConstant;
 import io.nuls.pocnetwork.model.ConsensusKeys;
 import io.nuls.pocnetwork.model.ConsensusNet;
 import io.nuls.pocnetwork.model.ConsensusNetGroup;
 import io.nuls.pocnetwork.service.ConsensusNetService;
-import io.nuls.poc.model.bo.Chain;
-import io.nuls.poc.utils.manager.ChainManager;
+import io.nuls.pocnetwork.service.NetworkService;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +80,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConsensusNetServiceImpl implements ConsensusNetService {
     @Autowired
     private ChainManager chainManager;
+    @Autowired
+    NetworkService networkService;
     static Map<Integer, ConsensusNetGroup> GROUPS_MAP = new ConcurrentHashMap<>();
     static Map<Integer, ConsensusKeys> CONSENSUSKEYS_MAP = new ConcurrentHashMap<>();
     static final short ADD_CONSENSUS = 1;
@@ -95,7 +99,12 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
             ConsensusNet consensusNet = new ConsensusNet(consensusPubKey, null);
             group.addConsensus(consensusNet);
         } else if (DEL_CONSENSUS == updateType) {
-            group.removeConsensus(consensusPubKey);
+            String nodeId = group.removeConsensus(consensusPubKey);
+            if (null != nodeId) {
+                List<String> ips = new ArrayList<>();
+                ips.add(nodeId.split(":")[0]);
+                networkService.removeIps(chainId, ModuleE.CS.abbr, ips);
+            }
         }
         return true;
     }

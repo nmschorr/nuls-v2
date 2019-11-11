@@ -78,7 +78,13 @@ public class ConsensusNetGroup {
         return ips;
     }
 
-    public void removeConsensus(byte[] consensusPubKey) {
-        group.remove(HexUtil.encode(consensusPubKey));
+    public String removeConsensus(byte[] consensusPubKey) {
+        String key = HexUtil.encode(consensusPubKey);
+        ConsensusNet consensusNet= group.get(key);
+        if(null != consensusNet){
+          return null;
+        }
+        group.remove(key);
+       return consensusNet.getNodeId();
     }
 }

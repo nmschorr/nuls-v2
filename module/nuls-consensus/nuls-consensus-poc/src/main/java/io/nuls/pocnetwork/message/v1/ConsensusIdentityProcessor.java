@@ -38,6 +38,8 @@ import io.nuls.pocnetwork.service.NetworkService;
 import io.nuls.poc.model.bo.Chain;
 import io.nuls.poc.utils.manager.ChainManager;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -125,6 +127,10 @@ public class ConsensusIdentityProcessor implements MessageProcessor {
             boolean isConnect = networkService.connectPeer(chainId, consensusNetNodeId);
             if (!isConnect) {
                 chain.getLogger().warn("connect fail .nodeId = {}", consensusNet.getNodeId());
+            }else{
+                List<String> ips = new ArrayList<>();
+                ips.add(consensusNet.getNodeId().split(":")[0]);
+                networkService.addIps(chainId,"POC",ips);
             }
             //更新共识连接组,并且返回之前未连接
             if (!consensusNetService.updateConsensusNode(chainId, consensusNet, isConnect)) {
