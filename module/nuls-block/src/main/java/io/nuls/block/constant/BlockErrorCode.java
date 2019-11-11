@@ -52,6 +52,6 @@ public interface BlockErrorCode extends CommonCodeConstanst {
     ErrorCode IRRELEVANT_BLOCK = ErrorCode.init(ModuleE.BL.getPrefix() + "_0016");
     ErrorCode BLOCK_VERIFY_ERROR = ErrorCode.init(ModuleE.BL.getPrefix() + "_0017");
     ErrorCode BLOCK_SYN_ERROR = ErrorCode.init(ModuleE.BL.getPrefix() + "_0018");
-
+    ErrorCode BLOCK_VERIFY_BZT_ERROR = ErrorCode.init(ModuleE.BL.getPrefix() + "_0019");
 
 }

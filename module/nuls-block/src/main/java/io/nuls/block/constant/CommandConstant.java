@@ -62,6 +62,11 @@ public interface CommandConstant {
      * 小区块消息
      */
     String SMALL_BLOCK_MESSAGE = "sBlock";
+
+    /**
+     * 小区块消息
+     */
+    String SMALL_BLOCK_BZT_MESSAGE = "sBlockBZT";
     /**
      * 获取小区块消息
      */
@@ -76,6 +81,8 @@ public interface CommandConstant {
      * 获取一些信息
      */
     String INFO = "info";
+
+    String PUTBZTFLAG = "putBZTFlag";
     /**
      * 获取最新高度
      */

@@ -24,6 +24,7 @@ import io.nuls.base.RPCUtil;
 import io.nuls.base.basic.AddressTool;
 import io.nuls.base.data.Block;
 import io.nuls.base.data.BlockHeader;
+import io.nuls.base.data.SmallBlock;
 import io.nuls.block.constant.BlockErrorCode;
 import io.nuls.block.manager.ContextManager;
 import io.nuls.block.model.ChainContext;
@@ -53,10 +54,11 @@ import java.util.Map;
 public class ConsensusCall {
     @Autowired
     private static BlockService service;
+
     /**
      * 共识验证
      *
-     * @param chainId 链Id/chain id
+     * @param chainId  链Id/chain id
      * @param block
      * @param download 0区块下载中,1接收到最新区块
      * @return
@@ -83,6 +85,38 @@ public class ConsensusCall {
         } catch (Exception e) {
             logger.error("", e);
             return Result.getFailed(BlockErrorCode.BLOCK_VERIFY_ERROR);
+        }
+    }
+
+    /**
+     * TODO:
+     * 共识BZT验证
+     *
+     * @param chainId
+     * @param smallBlock
+     * @param nodeId
+     * @return
+     */
+    public static Result verifyBZT(int chainId, SmallBlock smallBlock, String nodeId) {
+        NulsLogger logger = ContextManager.getContext(chainId).getLogger();
+        try {
+            Map<String, Object> params = new HashMap<>(3);
+            params.put(Constants.CHAIN_ID, chainId);
+            params.put("smallBlock", RPCUtil.encode(smallBlock.serialize()));
+            params.put("nodeId", nodeId);
+            Response response = ResponseMessageProcessor.requestAndResponse(ModuleE.CS.abbr, "cs_validBlockBZT", params);
+            if (response.isSuccess()) {
+                Map responseData = (Map) response.getResponseData();
+                Map v = (Map) responseData.get("cs_validBlockBZT");
+                boolean value = (Boolean) v.get("value");
+                if (value) {
+                    return Result.getSuccess(BlockErrorCode.SUCCESS);
+                }
+            }
+            return Result.getFailed(ErrorCode.init(response.getResponseErrorCode()));
+        } catch (Exception e) {
+            logger.error("", e);
+            return Result.getFailed(BlockErrorCode.BLOCK_VERIFY_BZT_ERROR);
         }
     }
 
@@ -179,7 +213,7 @@ public class ConsensusCall {
     /**
      * 新增区块时通知共识模块
      *
-     * @param chainId 链Id/chain id
+     * @param chainId   链Id/chain id
      * @param localInit
      * @return
      */

@@ -40,6 +40,11 @@
         "handlers": "SmallBlockHandlerV1"
       },
       {
+        "name": "io.nuls.block.message.SmallBlockMessage",
+        "protocolCmd": "sBlockBZT",
+        "handlers": "SmallBlockBZTHandlerV1"
+      },
+      {
         "name": "io.nuls.block.message.TxGroupMessage",
         "protocolCmd": "txs",
         "handlers": "TxGroupHandlerV1"

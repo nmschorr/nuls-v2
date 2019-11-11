@@ -132,6 +132,19 @@ public class ChainContext {
      */
     private Map<NulsHash, List<String>> orphanBlockRelatedNodes;
 
+    /**
+     * 处理区块的拜占庭校验与基础校验的结果
+     */
+    private Map<NulsHash, Byte> savingBZTAndVerify = new ConcurrentHashMap<>(100);
+
+    public Map<NulsHash, Byte> getSavingBZTAndVerify() {
+        return savingBZTAndVerify;
+    }
+
+    public void setSavingBZTAndVerify(Map<NulsHash, Byte> savingBZTAndVerify) {
+        this.savingBZTAndVerify = savingBZTAndVerify;
+    }
+
     public Map<NulsHash, List<String>> getOrphanBlockRelatedNodes() {
         return orphanBlockRelatedNodes;
     }

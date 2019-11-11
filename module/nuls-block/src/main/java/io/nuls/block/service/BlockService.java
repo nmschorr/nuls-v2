@@ -161,7 +161,6 @@ public interface BlockService {
      * @return
      */
     boolean saveBlock(int chainId, Block block, boolean needLock);
-
     /**
      * 保存区块,已经考虑失败回滚操作,不抛出异常情况下,不会有垃圾数据
      *
@@ -174,6 +173,8 @@ public interface BlockService {
      * @return
      */
     boolean saveBlock(int chainId, Block block, int download, boolean needLock, boolean broadcast, boolean forward);
+
+    boolean saveConsensusBlock(int chainId, Block block, int download, boolean needLock, boolean broadcast, boolean forward);
 
     /**
      * 回滚区块,已经考虑失败回滚操作,不抛出异常情况下,不会有垃圾数据
@@ -204,6 +205,7 @@ public interface BlockService {
      * @return
      */
     boolean forwardBlock(int chainId, NulsHash hash, String excludeNode);
+    boolean forwardPocNetBlock(int chainId, NulsHash hash, String excludeNode);
 
     /**
      * 广播区块给连接的其他对等节点
@@ -213,6 +215,7 @@ public interface BlockService {
      * @return
      */
     boolean broadcastBlock(int chainId, Block block);
+    boolean broadcastPocNetBlock(int chainId, Block block);
 
     /**
      * 初始化方法
@@ -230,5 +233,5 @@ public interface BlockService {
      */
     NulsHash getBlockHash(int chainId, long height);
 
-
+    void putBlockBZT(int chainId, NulsHash hash,boolean bztResult);
 }

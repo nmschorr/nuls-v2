@@ -139,7 +139,23 @@ public class NetworkCall {
             return false;
         }
     }
-
+    public static boolean broadcastPocNet(int chainId, BaseBusinessMessage message, String excludeNodes, String command) {
+        NulsLogger logger = ContextManager.getContext(chainId).getLogger();
+        try {
+            Map<String, Object> params = new HashMap<>(5);
+            params.put(Constants.VERSION_KEY_STR, "1.0");
+            params.put(Constants.CHAIN_ID, chainId);
+            params.put("excludeNodes", excludeNodes);
+            params.put("messageBody", RPCUtil.encode(message.serialize()));
+            params.put("command", command);
+            boolean success = ResponseMessageProcessor.requestAndResponse(ModuleE.NW.abbr, "nw_broadcastByGroupFlag", params).isSuccess();
+            logger.debug("broadcastPocNet " + message.getClass().getName() + ", success:" + success);
+            return success;
+        } catch (Exception e) {
+            logger.error("", e);
+            return false;
+        }
+    }
     /**
      * 给指定节点发送消息
      *
@@ -175,6 +191,9 @@ public class NetworkCall {
      */
     public static boolean broadcast(int chainId, BaseBusinessMessage message, String command) {
         return broadcast(chainId, message, null, command);
+    }
+    public static boolean broadcastPocNet(int chainId, BaseBusinessMessage message, String command) {
+        return broadcastPocNet(chainId, message, null, command);
     }
 
     /**

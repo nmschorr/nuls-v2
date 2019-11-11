@@ -60,6 +60,33 @@ public class BlockResource extends BaseCmd {
     @Autowired
     private BlockService service;
 
+
+    /**
+     * 获取最新主链高度
+     *
+     * @param map
+     * @return
+     */
+    @CmdAnnotation(cmd = PUTBZTFLAG, version = 1.0, description = "returns network node height and local node height")
+    @Parameters({
+            @Parameter(parameterName = "chainId", requestType = @TypeDescriptor(value = int.class), parameterDes = "链ID"),
+            @Parameter(parameterName = "hash", requestType = @TypeDescriptor(value = String.class), parameterDes = "block hash值"),
+            @Parameter(parameterName = "result", requestType = @TypeDescriptor(value = Boolean.class), parameterDes = "true-成功，false-失败")
+    })
+    @ResponseData(name = "返回值", description = "返回一个Map对象，包含1个属性", responseType = @TypeDescriptor(value = Map.class, mapKeys = {
+            @Key(name = "value", valueType = Boolean.class, description = "true正常处理并返回")})
+    )
+    public Response putBZTFlag(Map map) {
+        int chainId = Integer.parseInt(map.get(Constants.CHAIN_ID).toString());
+        String hash = String.valueOf(map.get("hash"));
+        boolean result = Boolean.valueOf(map.get("result").toString());
+        Map<String, Boolean> responseData = new HashMap<>(1);
+        service.putBlockBZT(chainId, NulsHash.fromHex(hash), result);
+        responseData.put("value", true);
+        return success(responseData);
+    }
+
+
     /**
      * 获取最新主链高度
      *
@@ -499,7 +526,7 @@ public class BlockResource extends BaseCmd {
             NulsHash hash = NulsHash.fromHex(map.get("hash").toString());
             BlockHeader blockHeader = service.getBlockHeader(chainId, hash);
             Map<String, String> responseData = new HashMap<>(2);
-            if(blockHeader == null) {
+            if (blockHeader == null) {
                 return success(responseData);
             }
             responseData.put("value", RPCUtil.encode(blockHeader.serialize()));
@@ -532,7 +559,7 @@ public class BlockResource extends BaseCmd {
             NulsHash hash = NulsHash.fromHex(map.get("hash").toString());
             BlockHeaderPo blockHeader = service.getBlockHeaderPo(chainId, hash);
             Map<String, String> responseData = new HashMap<>(2);
-            if(blockHeader == null) {
+            if (blockHeader == null) {
                 return success(responseData);
             }
             responseData.put("value", RPCUtil.encode(blockHeader.serialize()));
@@ -565,7 +592,7 @@ public class BlockResource extends BaseCmd {
             NulsHash hash = NulsHash.fromHex(map.get("hash").toString());
             Block block = service.getBlock(chainId, hash);
             Map<String, String> responseData = new HashMap<>(2);
-            if(block == null) {
+            if (block == null) {
                 return success(responseData);
             }
             responseData.put("value", RPCUtil.encode(block.serialize()));
@@ -601,7 +628,7 @@ public class BlockResource extends BaseCmd {
             Block block = new Block();
             block.parse(new NulsByteBuffer(RPCUtil.decode((String) map.get("block"))));
             logger.debug("recieve block from local node, height:" + block.getHeader().getHeight() + ", hash:" + block.getHeader().getHash());
-            if (service.saveBlock(chainId, block, 1, true, true, false)) {
+            if (service.saveConsensusBlock(chainId, block, 1, true, true, false)) {
                 return success();
             } else {
                 SmallBlockCacher.setStatus(chainId, block.getHeader().getHash(), ERROR);
