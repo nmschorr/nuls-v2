@@ -148,6 +148,8 @@ public class NetworkCall {
             params.put("excludeNodes", excludeNodes);
             params.put("messageBody", RPCUtil.encode(message.serialize()));
             params.put("command", command);
+            params.put("module", ModuleE.CS.abbr);
+            params.put("groupFlag","POC");
             boolean success = ResponseMessageProcessor.requestAndResponse(ModuleE.NW.abbr, "nw_broadcastByGroupFlag", params).isSuccess();
             logger.debug("broadcastPocNet " + message.getClass().getName() + ", success:" + success);
             return success;
