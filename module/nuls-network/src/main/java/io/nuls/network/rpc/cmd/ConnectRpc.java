@@ -125,7 +125,7 @@ public class ConnectRpc extends BaseCmd {
         return success(rtMap.put("value", false));
     }
 
-    @CmdAnnotation(cmd = CmdConstant.CMD_DIRECT_CONNECT_NODES, version = 1.0,
+    @CmdAnnotation(cmd = CmdConstant.CMD_ADD_BUSINESS_GROUP_IPS, version = 1.0,
             description = "添加连接业务节点组")
     @Parameters(value = {
             @Parameter(parameterName = "chainId", requestType = @TypeDescriptor(value = int.class), parameterValidRange = "[1-65535]", parameterDes = "连接的链Id,取值区间[1-65535]"),
@@ -152,7 +152,7 @@ public class ConnectRpc extends BaseCmd {
             return failed(e.getMessage());
         }
     }
-    @CmdAnnotation(cmd = CmdConstant.CMD_DIRECT_CONNECT_NODES, version = 1.0,
+    @CmdAnnotation(cmd = CmdConstant.CMD_REMOVE_BUSINESS_GROUP_IPS, version = 1.0,
             description = "移除连接业务节点组")
     @Parameters(value = {
             @Parameter(parameterName = "chainId", requestType = @TypeDescriptor(value = int.class), parameterValidRange = "[1-65535]", parameterDes = "连接的链Id,取值区间[1-65535]"),
