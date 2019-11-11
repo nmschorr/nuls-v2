@@ -47,6 +47,10 @@ public interface CmdConstant {
      * 通过IP地址发送消息
      */
     String CMD_NW_SEND_BY_IPS = "nw_sendByIps";
+    /**
+     * 通过业务组发送地址发送消息
+     */
+    String CMD_NW_SEND_BY_GROUP_FLAG = "nw_broadcastByGroupFlag";
 
     String CMD_NW_CROSS_RANDOM_BROADCAST = "nw_crossRandomBroadcast";
     /**

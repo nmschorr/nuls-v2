@@ -65,16 +65,6 @@ public class ConnectionManager extends BaseManager {
     NettyServer server = null;
     NettyServer serverCross = null;
     private static ConnectionManager instance = new ConnectionManager();
-    /**
-     * 作为Server 被动连接的peer
-     * Passer as a server passive connection
-     */
-    private Map<String, Node> cacheConnectNodeInMap = new ConcurrentHashMap<>();
-    /**
-     * 作为client 主动连接的peer
-     * As the client actively connected peer
-     */
-    private Map<String, Node> cacheConnectNodeOutMap = new ConcurrentHashMap<>();
 
     public ExecutorService discover = ThreadUtils.createThreadPool(Runtime.getRuntime().availableProcessors(), 20, new NulsThreadFactory("NODE_DISCOVER_MULTI_THREAD"));
     public ExecutorService maintenance = ThreadUtils.createThreadPool(Runtime.getRuntime().availableProcessors(), 20, new NulsThreadFactory("NODE_MAINTENANCE_MULTI_THREAD"));

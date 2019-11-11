@@ -34,6 +34,7 @@ import io.nuls.network.cfg.NetworkConfig;
 import io.nuls.network.constant.CmdConstant;
 import io.nuls.network.constant.NetworkErrorCode;
 import io.nuls.network.constant.NodeConnectStatusEnum;
+import io.nuls.network.manager.BusinessGroupManager;
 import io.nuls.network.manager.ConnectionManager;
 import io.nuls.network.manager.NodeGroupManager;
 import io.nuls.network.model.Node;
@@ -42,6 +43,7 @@ import io.nuls.network.utils.IpUtil;
 import io.nuls.network.utils.LoggerUtil;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -112,7 +114,7 @@ public class ConnectRpc extends BaseCmd {
                         hadConn = nodeGroup.getLocalNetNodeContainer().hadPeerIp(nodeId, ipPort[0]);
                         times++;
                     }
-                    success(rtMap.put("value", hadConn));
+                   return success(rtMap.put("value", hadConn));
                 }
 
             }
@@ -123,5 +125,58 @@ public class ConnectRpc extends BaseCmd {
         return success(rtMap.put("value", false));
     }
 
+    @CmdAnnotation(cmd = CmdConstant.CMD_DIRECT_CONNECT_NODES, version = 1.0,
+            description = "添加连接业务节点组")
+    @Parameters(value = {
+            @Parameter(parameterName = "chainId", requestType = @TypeDescriptor(value = int.class), parameterValidRange = "[1-65535]", parameterDes = "连接的链Id,取值区间[1-65535]"),
+            @Parameter(parameterName = "module", requestType = @TypeDescriptor(value = String.class), parameterDes = "模块名称"),
+            @Parameter(parameterName = "groupFlag", requestType = @TypeDescriptor(value = String.class), parameterDes = "节点组标识"),
+            @Parameter(parameterName = "ips", requestType = @TypeDescriptor(value = List.class), parameterDes = "新增的IP组")
 
+    })
+    @ResponseData(name = "返回值", description = "返回一个Map对象", responseType = @TypeDescriptor(value = Map.class, mapKeys = {
+            @Key(name = "value", valueType = Boolean.class, description = "正确true,错误false")
+    }))
+    public Response addIps(Map params) {
+        int chainId = Integer.valueOf(String.valueOf(params.get("chainId")));
+        String module = String.valueOf(params.get("module"));
+        String groupFlag = String.valueOf(params.get("groupFlag"));
+        List<String> ips = (List) params.get("ips");
+        BusinessGroupManager businessGroupManager = BusinessGroupManager.getInstance();
+        Map<String, Object> rtMap = new HashMap<>(1);
+        try {
+            businessGroupManager.addNodes(chainId, module, groupFlag, ips);
+            return success(rtMap.put("value", true));
+        } catch (Exception e) {
+            LoggerUtil.logger(chainId).error(e);
+            return failed(e.getMessage());
+        }
+    }
+    @CmdAnnotation(cmd = CmdConstant.CMD_DIRECT_CONNECT_NODES, version = 1.0,
+            description = "移除连接业务节点组")
+    @Parameters(value = {
+            @Parameter(parameterName = "chainId", requestType = @TypeDescriptor(value = int.class), parameterValidRange = "[1-65535]", parameterDes = "连接的链Id,取值区间[1-65535]"),
+            @Parameter(parameterName = "module", requestType = @TypeDescriptor(value = String.class), parameterDes = "模块名称"),
+            @Parameter(parameterName = "groupFlag", requestType = @TypeDescriptor(value = String.class), parameterDes = "节点组标识"),
+            @Parameter(parameterName = "ips", requestType = @TypeDescriptor(value = List.class), parameterDes = "新增的IP组")
+
+    })
+    @ResponseData(name = "返回值", description = "返回一个Map对象", responseType = @TypeDescriptor(value = Map.class, mapKeys = {
+            @Key(name = "value", valueType = Boolean.class, description = "正确true,错误false")
+    }))
+    public Response removeIps(Map params) {
+        int chainId = Integer.valueOf(String.valueOf(params.get("chainId")));
+        String module = String.valueOf(params.get("module"));
+        String groupFlag = String.valueOf(params.get("groupFlag"));
+        List<String> ips = (List) params.get("ips");
+        BusinessGroupManager businessGroupManager = BusinessGroupManager.getInstance();
+        Map<String, Object> rtMap = new HashMap<>(1);
+        try {
+            businessGroupManager.removeNodes(chainId, module, groupFlag, ips);
+            return success(rtMap.put("value", true));
+        } catch (Exception e) {
+            LoggerUtil.logger(chainId).error(e);
+            return failed(e.getMessage());
+        }
+    }
 }
