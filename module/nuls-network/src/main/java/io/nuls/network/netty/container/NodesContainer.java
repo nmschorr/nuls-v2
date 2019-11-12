@@ -37,9 +37,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- *
  * @author lanjinsheng
- *
  */
 public class NodesContainer implements Serializable {
 
@@ -232,6 +230,11 @@ public class NodesContainer implements Serializable {
 
     public boolean hadInConnection(String ip) {
         return (null != inNodes.get(ip));
+    }
+
+    public boolean hadPeerIp(String nodeId, String ip) {
+        return (null != connectedNodes.get(nodeId) ||
+                hadInConnection(ip));
     }
 
     public Node getNode(String nodeId) {

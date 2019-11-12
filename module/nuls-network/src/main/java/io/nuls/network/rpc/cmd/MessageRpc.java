@@ -33,6 +33,7 @@ import io.nuls.core.rpc.model.message.Response;
 import io.nuls.network.constant.CmdConstant;
 import io.nuls.network.constant.NetworkConstant;
 import io.nuls.network.constant.NetworkErrorCode;
+import io.nuls.network.manager.BusinessGroupManager;
 import io.nuls.network.manager.MessageManager;
 import io.nuls.network.manager.NodeGroupManager;
 import io.nuls.network.manager.handler.MessageHandlerFactory;
@@ -182,6 +183,73 @@ public class MessageRpc extends BaseCmd {
         return success(rtMap);
     }
 
+
+    /**
+     * nw_broadcast
+     * 外部广播接收
+     */
+    @CmdAnnotation(cmd = CmdConstant.CMD_NW_SEND_BY_IPS, version = 1.0,
+            description = "广播消息")
+    @Parameters(value = {
+            @Parameter(parameterName = "chainId", requestType = @TypeDescriptor(value = int.class), parameterValidRange = "[1-65535]", parameterDes = "连接的链Id,取值区间[1-65535]"),
+            @Parameter(parameterName = "ips", requestType = @TypeDescriptor(value = List.class), parameterDes = "发送的节点Ip集合"),
+            @Parameter(parameterName = "messageBody", requestType = @TypeDescriptor(value = String.class), parameterDes = "消息体Hex"),
+            @Parameter(parameterName = "command", requestType = @TypeDescriptor(value = String.class), parameterDes = "消息协议指令")
+
+    })
+    @ResponseData(name = "返回值", description = "返回一个Map对象", responseType = @TypeDescriptor(value = Map.class, mapKeys = {
+            @Key(name = "list", valueType = List.class, valueElement = String.class, description = "可发送连接集合")
+    }))
+    public Response sendByIps(Map params) {
+        List<String> rtList = new ArrayList<>();
+        Map<String ,Object> rtMap=new HashMap<>();
+        int percent = NetworkConstant.FULL_BROADCAST_PERCENT;
+        try {
+            int chainId = Integer.valueOf(String.valueOf(params.get("chainId")));
+            List<String> ips = (List) (params.get("ips"));
+            Map<String ,Integer> ipsMap=new HashMap<>();
+            for(String ip:ips){
+                ipsMap.put(ip,1);
+            }
+            String messageBodyStr = String.valueOf(params.get("messageBody"));
+            byte[] messageBody = RPCUtil.decode(messageBodyStr);
+            String cmd = String.valueOf(params.get("command"));
+            Object percentParam = params.get("percent");
+            if (null != percentParam) {
+                percent = Integer.valueOf(String.valueOf(percentParam));
+            }
+            MessageManager messageManager = MessageManager.getInstance();
+            NodeGroup nodeGroup = NodeGroupManager.getInstance().getNodeGroupByChainId(chainId);
+            if (null == nodeGroup) {
+                LoggerUtil.logger(chainId).error("chain is not exist!");
+                return failed(NetworkErrorCode.PARAMETER_ERROR);
+            }
+            long magicNumber = nodeGroup.getMagicNumber();
+            long checksum = messageManager.getCheckSum(messageBody);
+            MessageHeader header = new MessageHeader(cmd, magicNumber, checksum, messageBody.length);
+            byte[] headerByte = header.serialize();
+            byte[] message = new byte[headerByte.length + messageBody.length];
+            System.arraycopy(headerByte, 0, message, 0, headerByte.length);
+            System.arraycopy(messageBody, 0, message, headerByte.length, messageBody.length);
+            Collection<Node> nodesCollection = nodeGroup.getAvailableNodes(true);
+            List<Node> nodes = new ArrayList<>();
+            for (Node node : nodesCollection) {
+                if (null!=ipsMap.get(node.getIp())){
+                    nodes.add(node);
+                    rtList.add(node.getIp());
+                }
+            }
+            if (nodes.size()>0) {
+                messageManager.broadcastToNodes(message, cmd, nodes, true, percent);
+            }
+        } catch (Exception e) {
+            LoggerUtil.COMMON_LOG.error(e);
+            return failed(NetworkErrorCode.PARAMETER_ERROR);
+        }
+        rtMap.put("list",rtList);
+        return success(rtMap);
+    }
+
     /**
      * nw_sendPeersMsg
      */
@@ -230,5 +298,71 @@ public class MessageRpc extends BaseCmd {
             return failed(NetworkErrorCode.PARAMETER_ERROR);
         }
         return success();
+    }
+
+    /**
+     * nw_sendPeersMsg
+     */
+
+    @CmdAnnotation(cmd = CmdConstant.CMD_NW_SEND_BY_GROUP_FLAG, version = 1.0,
+            description = "向指定节点发送消息")
+    @Parameters(value = {
+            @Parameter(parameterName = "chainId", requestType = @TypeDescriptor(value = int.class), parameterValidRange = "[1-65535]", parameterDes = "连接的链Id,取值区间[1-65535]"),
+            @Parameter(parameterName = "module", requestType = @TypeDescriptor(value = String.class), parameterDes = "模块名称"),
+            @Parameter(parameterName = "groupFlag", requestType = @TypeDescriptor(value = String.class), parameterDes = "节点组标识"),
+            @Parameter(parameterName = "messageBody", requestType = @TypeDescriptor(value = String.class), parameterDes = "消息体Hex"),
+            @Parameter(parameterName = "command", requestType = @TypeDescriptor(value = String.class), parameterDes = "消息协议指令")
+
+    })
+    @ResponseData(name = "返回值", description = "返回一个Map对象", responseType = @TypeDescriptor(value = Map.class, mapKeys = {
+            @Key(name = "list", valueType = List.class, valueElement = String.class, description = "可发送连接集合")
+    }))
+    public Response sendByGroupIps(Map params) {
+        List<String> rtList = new ArrayList<>();
+        Map<String ,Object> rtMap=new HashMap<>();
+        int percent = NetworkConstant.FULL_BROADCAST_PERCENT;
+        try {
+            int chainId = Integer.valueOf(String.valueOf(params.get("chainId")));
+            String module = String.valueOf(params.get("module"));
+            String groupFlag = String.valueOf(params.get("groupFlag"));
+            BusinessGroupManager businessGroupManager=BusinessGroupManager.getInstance();
+            Map<String ,String> ipsMap=businessGroupManager.getIpsMap(chainId,module,groupFlag);
+            String messageBodyStr = String.valueOf(params.get("messageBody"));
+            byte[] messageBody = RPCUtil.decode(messageBodyStr);
+            String cmd = String.valueOf(params.get("command"));
+            Object percentParam = params.get("percent");
+            if (null != percentParam) {
+                percent = Integer.valueOf(String.valueOf(percentParam));
+            }
+            MessageManager messageManager = MessageManager.getInstance();
+            NodeGroup nodeGroup = NodeGroupManager.getInstance().getNodeGroupByChainId(chainId);
+            if (null == nodeGroup) {
+                LoggerUtil.logger(chainId).error("chain is not exist!");
+                return failed(NetworkErrorCode.PARAMETER_ERROR);
+            }
+            long magicNumber = nodeGroup.getMagicNumber();
+            long checksum = messageManager.getCheckSum(messageBody);
+            MessageHeader header = new MessageHeader(cmd, magicNumber, checksum, messageBody.length);
+            byte[] headerByte = header.serialize();
+            byte[] message = new byte[headerByte.length + messageBody.length];
+            System.arraycopy(headerByte, 0, message, 0, headerByte.length);
+            System.arraycopy(messageBody, 0, message, headerByte.length, messageBody.length);
+            Collection<Node> nodesCollection = nodeGroup.getAvailableNodes(true);
+            List<Node> nodes = new ArrayList<>();
+            for (Node node : nodesCollection) {
+                if (null!=ipsMap.get(node.getIp())){
+                    nodes.add(node);
+                    rtList.add(node.getIp());
+                }
+            }
+            if (nodes.size()>0) {
+                messageManager.broadcastToNodes(message, cmd, nodes, true, percent);
+            }
+        } catch (Exception e) {
+            LoggerUtil.COMMON_LOG.error(e);
+            return failed(NetworkErrorCode.PARAMETER_ERROR);
+        }
+        rtMap.put("list",rtList);
+        return success(rtMap);
     }
 }

@@ -38,8 +38,6 @@ import io.nuls.network.model.po.*;
 import io.nuls.network.netty.container.NodesContainer;
 import io.nuls.network.utils.LoggerUtil;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
@@ -527,4 +525,39 @@ public class NodeGroup implements Dto {
         return po;
     }
 
+    public String getMyExtranetIp() {
+        List<Node> nodes = new ArrayList<>();
+        nodes.addAll(getLocalNetNodeContainer().getConnectedNodes().values());
+        nodes.addAll(getCrossNodeContainer().getConnectedNodes().values());
+        return getMostSameIp(nodes);
+    }
+
+    private String getMostSameIp(Collection<Node> nodes) {
+
+        Map<String, Integer> ipMaps = new HashMap<>();
+
+        for (Node node : nodes) {
+            String ip = node.getExternalIp();
+            if (ip == null) {
+                continue;
+            }
+            Integer count = ipMaps.get(ip);
+            if (count == null) {
+                ipMaps.put(ip, 1);
+            } else {
+                ipMaps.put(ip, count + 1);
+            }
+        }
+
+        int maxCount = 0;
+        String ip = null;
+        for (Map.Entry<String, Integer> entry : ipMaps.entrySet()) {
+            if (entry.getValue() > maxCount) {
+                maxCount = entry.getValue();
+                ip = entry.getKey();
+            }
+        }
+
+        return ip;
+    }
 }

@@ -1,11 +1,15 @@
 package io.nuls.network.rpc.cmd;
 
+import io.nuls.core.core.annotation.Autowired;
 import io.nuls.core.core.annotation.Component;
 import io.nuls.core.core.ioc.SpringLiteContext;
+import io.nuls.core.model.StringUtils;
 import io.nuls.core.rpc.cmd.BaseCmd;
 import io.nuls.core.rpc.model.*;
 import io.nuls.core.rpc.model.message.Response;
+import io.nuls.network.cfg.NetworkConfig;
 import io.nuls.network.constant.CmdConstant;
+import io.nuls.network.constant.NetworkConstant;
 import io.nuls.network.manager.NodeGroupManager;
 import io.nuls.network.manager.TimeManager;
 import io.nuls.network.model.Node;
@@ -25,6 +29,8 @@ import java.util.Map;
  */
 @Component
 public class NetworkInfoRpc extends BaseCmd {
+    @Autowired
+    NetworkConfig networkConfig;
 
     @CmdAnnotation(cmd = CmdConstant.CMD_NW_INFO, version = 1.0,
             description = "获取节点网络基本信息")
@@ -76,6 +82,27 @@ public class NetworkInfoRpc extends BaseCmd {
         res.put("inCount", inCount);
         //主动连接节点数量
         res.put("outCount", outCount);
+        return success(res);
+    }
+
+    @CmdAnnotation(cmd = CmdConstant.CMD_NW_EXTRANET_IP, version = 1.0,
+            description = "获取外网ip")
+    @Parameters(value = {
+            @Parameter(parameterName = "chainId", requestType = @TypeDescriptor(value = int.class), parameterValidRange = "[1-65535]", parameterDes = "连接的链Id,取值区间[1-65535]")
+    })
+    @ResponseData(name = "返回值", description = "返回一个Map对象", responseType = @TypeDescriptor(value = Map.class, mapKeys = {
+            @Key(name = "nodeId", valueType = String.class, description = "获取节点连接id")
+    }))
+    public Response getNetworkConnectInfo(Map<String, Object> params) {
+        int chainId = Integer.valueOf(String.valueOf(params.get("chainId")));
+        NodeGroup nodeGroup = NodeGroupManager.getInstance().getNodeGroupByChainId(chainId);
+        Map<String, Object> res = new HashMap<>(1);
+        String ip = nodeGroup.getMyExtranetIp();
+        String nodeId = "";
+        if (StringUtils.isNotBlank(ip)) {
+            nodeId = ip + NetworkConstant.COLON + networkConfig.getPort();
+        }
+        res.put("nodeId", nodeId);
         return success(res);
     }
 

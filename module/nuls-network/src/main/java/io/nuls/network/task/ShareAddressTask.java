@@ -79,7 +79,7 @@ public class ShareAddressTask implements Runnable {
         } else {
             MessageManager.getInstance().sendGetAddressMessage(nodeGroup, false, true, true);
         } //shareMyServer
-        String externalIp = getMyExtranetIp();
+        String externalIp = nodeGroup.getMyExtranetIp();
         if (externalIp == null) {
             return;
         }
@@ -104,7 +104,7 @@ public class ShareAddressTask implements Runnable {
         //getMoreNodes
         MessageManager.getInstance().sendGetAddressMessage(nodeGroup, true, true, true);
         //shareMyServer
-        String externalIp = getMyExtranetIp();
+        String externalIp = nodeGroup.getMyExtranetIp();
         if (externalIp == null) {
             return;
         }
@@ -122,41 +122,7 @@ public class ShareAddressTask implements Runnable {
         }
     }
 
-    private String getMyExtranetIp() {
-        List<Node> nodes = new ArrayList<>();
-        nodes.addAll(nodeGroup.getLocalNetNodeContainer().getConnectedNodes().values());
-        nodes.addAll(nodeGroup.getCrossNodeContainer().getConnectedNodes().values());
-        return getMostSameIp(nodes);
-    }
 
-    private String getMostSameIp(Collection<Node> nodes) {
-
-        Map<String, Integer> ipMaps = new HashMap<>();
-
-        for (Node node : nodes) {
-            String ip = node.getExternalIp();
-            if (ip == null) {
-                continue;
-            }
-            Integer count = ipMaps.get(ip);
-            if (count == null) {
-                ipMaps.put(ip, 1);
-            } else {
-                ipMaps.put(ip, count + 1);
-            }
-        }
-
-        int maxCount = 0;
-        String ip = null;
-        for (Map.Entry<String, Integer> entry : ipMaps.entrySet()) {
-            if (entry.getValue() > maxCount) {
-                maxCount = entry.getValue();
-                ip = entry.getKey();
-            }
-        }
-
-        return ip;
-    }
 
     private void doShare(String externalIp, Collection<Node> nodes, int port, int crossPort, boolean isCrossAddress) {
         IpAddressShare ipAddressShare = new IpAddressShare(externalIp, port, crossPort);
