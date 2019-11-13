@@ -159,7 +159,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     }
 
     @Override
-    public void clearConsensusNetwork(int chainId) {
+    public void cleanConsensusNetwork(int chainId) {
         GROUPS_MAP.remove(chainId);
         CONSENSUSKEYS_MAP.remove(chainId);
     }

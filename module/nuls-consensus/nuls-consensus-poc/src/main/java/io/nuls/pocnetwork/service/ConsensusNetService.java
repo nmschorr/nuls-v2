@@ -63,7 +63,7 @@ public interface ConsensusNetService {
     /**
      * @param chainId
      */
-    void clearConsensusNetwork(int chainId);
+    void cleanConsensusNetwork(int chainId);
 
     ConsensusKeys getSelfConsensusKeys(int chainId);
 

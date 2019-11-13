@@ -183,6 +183,11 @@ public class CommandHandler implements InitializingBean {
         register(getBean(GetCrossChainRegisterInfoProcessor.class));
         register(getBean(GetCrossAssetInfoProcessor.class));
         register(getBean(GetCrossTxStateProcessor.class));
+
+        //add test
+        register(getBean(TestInitNetProcessor.class));
+        register(getBean(TestUpdateNetProcessor.class));
+        register(getBean(TestCleanNetProcessor.class));
     }
 
     public void start() {
