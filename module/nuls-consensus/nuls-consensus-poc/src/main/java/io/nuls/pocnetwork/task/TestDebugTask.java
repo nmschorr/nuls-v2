@@ -24,28 +24,31 @@
  */
 package io.nuls.pocnetwork.task;
 
+import io.nuls.core.core.ioc.SpringLiteContext;
+import io.nuls.poc.utils.LoggerUtil;
+import io.nuls.pocnetwork.service.ConsensusNetService;
+
 /**
- *
  * 测试 定时打印连接信息
  *
  * @author lan
  * @create 2018/11/14
  */
 public class TestDebugTask implements Runnable {
-    static String pub1="025cf6d48cf00d875cde55fd9bbe5176d16f927991f6c7aac07890d091f16ca941";
-    static String pub2="02214fed44362ee44b2ef690a133437ea91b4d6f94d16e653fb3d1dea3d13d88bb";
-    static String pub3="02632a4768a9c4b5bd5dc4f3de0361eaf09aff127fa6eb2cf9dbac403776efd8e3";
+    static String pub1 = "025cf6d48cf00d875cde55fd9bbe5176d16f927991f6c7aac07890d091f16ca941";
+    static String pub2 = "02214fed44362ee44b2ef690a133437ea91b4d6f94d16e653fb3d1dea3d13d88bb";
+    static String pub3 = "02632a4768a9c4b5bd5dc4f3de0361eaf09aff127fa6eb2cf9dbac403776efd8e3";
+
     @Override
     public void run() {
-        printlnPeer();
+        printlnInfos();
     }
 
-    private void printlnPeer() {
-
+    private void printlnInfos() {
+        LoggerUtil.commonLog.debug("TestDebugTask printlnInfos====");
+        ConsensusNetService consensusNetService = SpringLiteContext.getBean(ConsensusNetService.class);
+        consensusNetService.printTestInfo();
     }
 
-    private void  initConsensusNetworkTest(){
-
-    }
 
 }

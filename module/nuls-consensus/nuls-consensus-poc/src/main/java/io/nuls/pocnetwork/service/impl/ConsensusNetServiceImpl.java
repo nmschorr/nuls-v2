@@ -57,6 +57,7 @@ import io.nuls.core.rpc.model.ModuleE;
 import io.nuls.core.rpc.model.message.Response;
 import io.nuls.core.rpc.netty.processor.ResponseMessageProcessor;
 import io.nuls.poc.model.bo.Chain;
+import io.nuls.poc.utils.LoggerUtil;
 import io.nuls.poc.utils.manager.ChainManager;
 import io.nuls.pocnetwork.constant.NetworkCmdConstant;
 import io.nuls.pocnetwork.model.ConsensusKeys;
@@ -88,6 +89,27 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     static Map<Integer, ConsensusKeys> CONSENSUSKEYS_MAP = new ConcurrentHashMap<>();
     static final short ADD_CONSENSUS = 1;
     static final short DEL_CONSENSUS = 2;
+
+    @Override
+    public void printTestInfo() {
+        for (Map.Entry<Integer, ConsensusNetGroup> entry : GROUPS_MAP.entrySet()) {
+            Integer chainId = entry.getKey();
+            LoggerUtil.commonLog.debug("GROUPS_MAP========chainId={}", chainId);
+            ConsensusNetGroup consensusNetGroup = entry.getValue();
+            for (Map.Entry<String, ConsensusNet> entry2 : consensusNetGroup.getGroup().entrySet()) {
+                LoggerUtil.commonLog.debug("*********");
+                LoggerUtil.commonLog.debug("========pubkey={}", entry2.getKey());
+                LoggerUtil.commonLog.debug("========nodeId={}", entry2.getValue().getNodeId());
+            }
+        }
+        for (Map.Entry<Integer, ConsensusKeys> entry : CONSENSUSKEYS_MAP.entrySet()) {
+            Integer chainId = entry.getKey();
+            LoggerUtil.commonLog.debug("CONSENSUSKEYS_MAP========chainId={}", chainId);
+            ConsensusKeys consensusKeys = entry.getValue();
+            LoggerUtil.commonLog.debug("========pubkey={}", HexUtil.encode(consensusKeys.getPubKey()));
+            LoggerUtil.commonLog.debug("========privkey={}", HexUtil.encode(consensusKeys.getPrivKey()));
+        }
+    }
 
     /**
      * @param consensusPubKey
@@ -190,6 +212,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
         consensusNet1.setHadConnect(isConnect);
         return orgConn;
     }
+
 
     /**
      * 广播共识消息返回已发送连接列表

@@ -53,6 +53,7 @@ public interface ConsensusNetService {
 
     /**
      * 广播共识消息
+     *
      * @param chainId
      * @param cmd
      * @param messageBodyHex
@@ -70,4 +71,6 @@ public interface ConsensusNetService {
     boolean isConsensusNode(int chainId, ConsensusNet consensusNet);
 
     boolean updateConsensusNode(int chainId, ConsensusNet consensusNet, boolean isConnect);
+
+    void printTestInfo();
 }
