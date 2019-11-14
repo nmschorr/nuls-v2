@@ -866,6 +866,7 @@ public class TxServiceImpl implements TxService {
                     packableTxs.add(csTxStr);
                 }
             }
+
             //检测最新高度
             if (blockHeight < chain.getBestBlockHeight() + 1) {
                 //这个阶段已经不够时间再打包,所以直接超时异常处理交易回滚至待打包队列,打空块
