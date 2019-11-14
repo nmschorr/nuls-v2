@@ -84,7 +84,8 @@ public class ConnectRpc extends BaseCmd {
             } else {
                 if (nodeGroup.getLocalNetNodeContainer().hadPeerIp(nodeId, ipPort[0])) {
                     LoggerUtil.logger(chainId).info("connected success:{}, had exist.", nodeId);
-                    return success(rtMap.put("value", true));
+                    rtMap.put("value", true);
+                    return success(rtMap);
                 }
                 Node node = new Node(nodeGroup.getMagicNumber(), ipPort[0], Integer.valueOf(ipPort[1]), 0, Node.OUT, blCross);
                 node.setConnectStatus(NodeConnectStatusEnum.CONNECTING);
@@ -113,7 +114,8 @@ public class ConnectRpc extends BaseCmd {
                         times++;
                     }
                     LoggerUtil.logger(chainId).info("connected node:{} hadConn={} success", ipPort[0],hadConn);
-                    return success(rtMap.put("value", hadConn));
+                    rtMap.put("value", hadConn);
+                    return success(rtMap);
                 }
 
             }
@@ -121,7 +123,8 @@ public class ConnectRpc extends BaseCmd {
             LoggerUtil.logger(chainId).error(e);
             return failed(e.getMessage());
         }
-        return success(rtMap.put("value", false));
+        rtMap.put("value", false);
+        return success(rtMap);
     }
 
     @CmdAnnotation(cmd = CmdConstant.CMD_ADD_BUSINESS_GROUP_IPS, version = 1.0,
@@ -177,7 +180,8 @@ public class ConnectRpc extends BaseCmd {
         try {
             businessGroupManager.removeNodes(chainId, module, groupFlag, ips);
             businessGroupManager.printGroupsInfo(chainId, module, groupFlag);
-            return success(rtMap.put("value", true));
+            rtMap.put("value", true);
+            return success(rtMap);
         } catch (Exception e) {
             LoggerUtil.logger(chainId).error(e);
             return failed(e.getMessage());
