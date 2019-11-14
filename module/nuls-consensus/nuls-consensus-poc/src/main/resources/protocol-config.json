@@ -36,7 +36,7 @@
     ],
     "validMsgs": [
       {
-        "name": "io.nuls.network.model.message.ConsensusIdentitiesMsg",
+        "name": "io.nuls.pocnetwork.model.message.ConsensusIdentitiesMsg",
         "protocolCmd": "pocIdentity",
         "handlers": "ConsensusIdentityProcessorV1"
       }],
@@ -134,7 +134,7 @@
     ],
     "validMsgs": [
       {
-        "name": "io.nuls.network.model.message.ConsensusIdentitiesMsg",
+        "name": "io.nuls.pocnetwork.model.message.ConsensusIdentitiesMsg",
         "protocolCmd": "pocIdentity",
         "handlers": "ConsensusIdentityProcessorV1"
       }],
