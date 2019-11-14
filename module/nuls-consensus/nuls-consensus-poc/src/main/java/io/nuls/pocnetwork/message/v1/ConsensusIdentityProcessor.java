@@ -139,12 +139,15 @@ public class ConsensusIdentityProcessor implements MessageProcessor {
             //更新共识连接组,并且返回之前未连接
             if (!consensusNetService.updateConsensusNode(chainId, consensusNet, isConnect)) {
                 //向对方发送身份信息
+                chain.getLogger().debug("bengin sendIdentityMessage {} success",consensusNetNodeId);
                 networkService.sendIdentityMessage(chainId, consensusNetNodeId,consensusNet.getPubKey());
             }
         }
         if (message.isBroadcast()) {
 //        广播转发消息
+            chain.getLogger().debug("bengin broadCastIdentityMsg exclude={} success",nodeId);
             networkService.broadCastIdentityMsg(chainId, getCmd(), msgStr, nodeId);
         }
+        chain.getLogger().debug("=====================consensusIdentityProcessor deal end");
     }
 }

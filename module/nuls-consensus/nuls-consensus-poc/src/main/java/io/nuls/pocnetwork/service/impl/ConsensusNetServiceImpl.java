@@ -150,6 +150,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
 
         String nodeId = networkService.getSelfNodeId(chainId);
         chain.getLogger().debug("self nodeId:{}", nodeId);
+//        nodeId = "112.0.52.247:8001";
         ConsensusNet selfConsensusNet = new ConsensusNet();
         selfConsensusNet.setPubKey(consensusKeys.getPubKey());
         selfConsensusNet.setNodeId(nodeId);
@@ -207,7 +208,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     public boolean updateConsensusNode(int chainId, ConsensusNet consensusNet, boolean isConnect) {
         ConsensusNetGroup consensusNetGroup = GROUPS_MAP.get(chainId);
         ConsensusNet consensusNet1 = consensusNetGroup.getGroup().get(HexUtil.encode(consensusNet.getPubKey()));
-        boolean orgConn = (consensusNet1.getNodeId().equals(consensusNet.getNodeId())) && consensusNet1.isHadConnect();
+        boolean orgConn = (null != consensusNet1.getNodeId() && consensusNet1.getNodeId().equals(consensusNet.getNodeId())) && consensusNet1.isHadConnect();
         consensusNet1.setNodeId(consensusNet.getNodeId());
         consensusNet1.setHadConnect(isConnect);
         return orgConn;
