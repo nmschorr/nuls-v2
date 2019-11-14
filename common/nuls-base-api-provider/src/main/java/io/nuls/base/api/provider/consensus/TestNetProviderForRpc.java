@@ -3,6 +3,7 @@ package io.nuls.base.api.provider.consensus;
 import io.nuls.base.api.provider.BaseRpcService;
 import io.nuls.base.api.provider.Provider;
 import io.nuls.base.api.provider.Result;
+import io.nuls.base.api.provider.consensus.facade.InitNet;
 import io.nuls.core.constant.CommonCodeConstanst;
 import io.nuls.core.rpc.model.ModuleE;
 
@@ -24,7 +25,7 @@ public class TestNetProviderForRpc extends BaseRpcService implements TestNetProv
 
 
     @Override
-    public Result<Boolean> initNet(Map<String, Object> req) {
+    public Result<Boolean> initNet(InitNet req) {
         return call("cs_initNet",req, (Function<Map, Result>) res -> {
             try {
                 Boolean result = Boolean.valueOf(res.get("value").toString());

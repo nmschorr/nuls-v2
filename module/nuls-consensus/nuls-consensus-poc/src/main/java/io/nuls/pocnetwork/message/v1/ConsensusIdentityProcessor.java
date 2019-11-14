@@ -99,7 +99,9 @@ public class ConsensusIdentityProcessor implements MessageProcessor {
     @Override
     public void process(int chainId, String nodeId, String msgStr) {
         Chain chain = chainManager.getChainMap().get(chainId);
+        chain.getLogger().debug("recv csIndentity msg");
         ConsensusIdentitiesMsg message = RPCUtil.getInstanceRpcStr(msgStr, ConsensusIdentitiesMsg.class);
+        chain.getLogger().debug("msgHash={} recv from node={}", message.getMsgHash().toHex(),nodeId);
         if (duplicateMsg(message)) {
             chain.getLogger().debug("msgHash={} is duplicate,drop msg", message.getMsgHash().toHex());
             return;
@@ -124,10 +126,12 @@ public class ConsensusIdentityProcessor implements MessageProcessor {
                 return;
             }
             String consensusNetNodeId = consensusNet.getNodeId();
+            chain.getLogger().debug("begin connect {}",consensusNetNodeId);
             boolean isConnect = networkService.connectPeer(chainId, consensusNetNodeId);
             if (!isConnect) {
                 chain.getLogger().warn("connect fail .nodeId = {}", consensusNet.getNodeId());
             }else{
+                chain.getLogger().debug("connect {} success",consensusNetNodeId);
                 List<String> ips = new ArrayList<>();
                 ips.add(consensusNet.getNodeId().split(":")[0]);
                 networkService.addIps(chainId,"POC",ips);

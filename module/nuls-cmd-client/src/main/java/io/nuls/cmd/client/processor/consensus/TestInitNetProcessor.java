@@ -27,6 +27,7 @@ package io.nuls.cmd.client.processor.consensus;
 import io.nuls.base.api.provider.Result;
 import io.nuls.base.api.provider.ServiceManager;
 import io.nuls.base.api.provider.consensus.TestNetProvider;
+import io.nuls.base.api.provider.consensus.facade.InitNet;
 import io.nuls.base.api.provider.crosschain.facade.AddCrossAssetReq;
 import io.nuls.cmd.client.CommandBuilder;
 import io.nuls.cmd.client.CommandResult;
@@ -78,11 +79,12 @@ public class TestInitNetProcessor extends ConsensusBaseProcessor {
         String selfPub = args[2];
         String selfPriv = args[3];
         String consensusPubKeys = args[4];
-        Map<String,Object> req=new HashMap<>();
-        req.put("chainId",chainId);
-        req.put("selfPub",selfPub);
-        req.put("selfPriv",selfPriv);
-        req.put("consensusPubKeys",consensusPubKeys);
+//        Map<String,Object> req=new HashMap<>();
+        InitNet req = new InitNet();
+        req.setChainId(chainId);
+        req.setSelfPub(selfPub);
+        req.setSelfPriv(selfPriv);
+        req.setConsensusPubKeys(consensusPubKeys);
         Result<Boolean> result = provider.initNet(req);
         if (result.isFailed()) {
             return CommandResult.getFailed(result);

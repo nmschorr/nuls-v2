@@ -15,7 +15,7 @@ import java.util.Map;
 public interface TestNetProvider {
 
 
-    Result<Boolean> initNet(Map<String,Object> req);
+    Result<Boolean> initNet(InitNet req);
     Result<Boolean> cleanNet(Map<String,Object> req);
     Result<Boolean> updateNet(Map<String,Object> req);
 

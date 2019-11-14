@@ -24,13 +24,11 @@
  */
 package io.nuls.network.rpc.cmd;
 
-import io.nuls.core.core.annotation.Autowired;
 import io.nuls.core.core.annotation.Component;
 import io.nuls.core.model.StringUtils;
 import io.nuls.core.rpc.cmd.BaseCmd;
 import io.nuls.core.rpc.model.*;
 import io.nuls.core.rpc.model.message.Response;
-import io.nuls.network.cfg.NetworkConfig;
 import io.nuls.network.constant.CmdConstant;
 import io.nuls.network.constant.NetworkErrorCode;
 import io.nuls.network.constant.NodeConnectStatusEnum;
@@ -56,8 +54,6 @@ import java.util.Map;
 public class ConnectRpc extends BaseCmd {
     private NodeGroupManager nodeGroupManager = NodeGroupManager.getInstance();
     private final ConnectionManager connectionManager = ConnectionManager.getInstance();
-    @Autowired
-    NetworkConfig networkConfig;
 
     @CmdAnnotation(cmd = CmdConstant.CMD_DIRECT_CONNECT_NODES, version = 1.0,
             description = "连接节点")
@@ -87,6 +83,7 @@ public class ConnectRpc extends BaseCmd {
                 return failed(NetworkErrorCode.PARAMETER_ERROR);
             } else {
                 if (nodeGroup.getLocalNetNodeContainer().hadPeerIp(nodeId, ipPort[0])) {
+                    LoggerUtil.logger(chainId).info("connected success:{}, had exist.", nodeId);
                     return success(rtMap.put("value", true));
                 }
                 Node node = new Node(nodeGroup.getMagicNumber(), ipPort[0], Integer.valueOf(ipPort[1]), 0, Node.OUT, blCross);
@@ -110,6 +107,7 @@ public class ConnectRpc extends BaseCmd {
                     int times = 0;
                     boolean hadConn = false;
                     while (!hadConn && times < 10) {
+                        LoggerUtil.logger(chainId).info("continues connected node:{}", ipPort[0]);
                         Thread.sleep(100L);
                         hadConn = nodeGroup.getLocalNetNodeContainer().hadPeerIp(nodeId, ipPort[0]);
                         times++;
