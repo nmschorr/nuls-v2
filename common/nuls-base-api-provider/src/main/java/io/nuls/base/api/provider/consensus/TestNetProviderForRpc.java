@@ -4,6 +4,7 @@ import io.nuls.base.api.provider.BaseRpcService;
 import io.nuls.base.api.provider.Provider;
 import io.nuls.base.api.provider.Result;
 import io.nuls.base.api.provider.consensus.facade.InitNet;
+import io.nuls.base.api.provider.consensus.facade.UpdateNet;
 import io.nuls.core.constant.CommonCodeConstanst;
 import io.nuls.core.rpc.model.ModuleE;
 
@@ -37,8 +38,8 @@ public class TestNetProviderForRpc extends BaseRpcService implements TestNetProv
     }
 
     @Override
-    public Result<Boolean> cleanNet(Map<String, Object> req) {
-        return call("cs_initNet",req, (Function<Map, Result>) res -> {
+    public Result<Boolean> cleanNet(UpdateNet req) {
+        return call("cs_cleanNet",req, (Function<Map, Result>) res -> {
             try {
                 Boolean result = Boolean.valueOf(res.get("value").toString());
                 return success(result);
@@ -49,7 +50,14 @@ public class TestNetProviderForRpc extends BaseRpcService implements TestNetProv
     }
 
     @Override
-    public Result<Boolean> updateNet(Map<String, Object> req) {
-        return null;
+    public Result<Boolean> updateNet(UpdateNet req) {
+        return call("cs_updateNet",req, (Function<Map, Result>) res -> {
+            try {
+                Boolean result = Boolean.valueOf(res.get("value").toString());
+                return success(result);
+            } catch (Exception e) {
+                return fail(CommonCodeConstanst.FAILED);
+            }
+        });
     }
 }

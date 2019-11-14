@@ -112,7 +112,8 @@ public class ConnectRpc extends BaseCmd {
                         hadConn = nodeGroup.getLocalNetNodeContainer().hadPeerIp(nodeId, ipPort[0]);
                         times++;
                     }
-                   return success(rtMap.put("value", hadConn));
+                    LoggerUtil.logger(chainId).info("connected node:{} hadConn={} success", ipPort[0],hadConn);
+                    return success(rtMap.put("value", hadConn));
                 }
 
             }
@@ -140,16 +141,19 @@ public class ConnectRpc extends BaseCmd {
         String module = String.valueOf(params.get("module"));
         String groupFlag = String.valueOf(params.get("groupFlag"));
         List<String> ips = (List) params.get("ips");
+        LoggerUtil.logger(chainId).info("addIps {}-{} ip={}", module, groupFlag, ips.get(0));
         BusinessGroupManager businessGroupManager = BusinessGroupManager.getInstance();
         Map<String, Object> rtMap = new HashMap<>(1);
         try {
             businessGroupManager.addNodes(chainId, module, groupFlag, ips);
+            businessGroupManager.printGroupsInfo(chainId, module, groupFlag);
             return success(rtMap.put("value", true));
         } catch (Exception e) {
             LoggerUtil.logger(chainId).error(e);
             return failed(e.getMessage());
         }
     }
+
     @CmdAnnotation(cmd = CmdConstant.CMD_REMOVE_BUSINESS_GROUP_IPS, version = 1.0,
             description = "移除连接业务节点组")
     @Parameters(value = {
@@ -167,10 +171,12 @@ public class ConnectRpc extends BaseCmd {
         String module = String.valueOf(params.get("module"));
         String groupFlag = String.valueOf(params.get("groupFlag"));
         List<String> ips = (List) params.get("ips");
+        LoggerUtil.logger(chainId).info("remove {}-{} ip={}", module, groupFlag, ips.get(0));
         BusinessGroupManager businessGroupManager = BusinessGroupManager.getInstance();
         Map<String, Object> rtMap = new HashMap<>(1);
         try {
             businessGroupManager.removeNodes(chainId, module, groupFlag, ips);
+            businessGroupManager.printGroupsInfo(chainId, module, groupFlag);
             return success(rtMap.put("value", true));
         } catch (Exception e) {
             LoggerUtil.logger(chainId).error(e);

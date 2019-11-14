@@ -27,6 +27,7 @@ package io.nuls.cmd.client.processor.consensus;
 import io.nuls.base.api.provider.Result;
 import io.nuls.base.api.provider.ServiceManager;
 import io.nuls.base.api.provider.consensus.TestNetProvider;
+import io.nuls.base.api.provider.consensus.facade.UpdateNet;
 import io.nuls.cmd.client.CommandBuilder;
 import io.nuls.cmd.client.CommandResult;
 import io.nuls.core.core.annotation.Component;
@@ -74,10 +75,10 @@ public class TestUpdateNetProcessor extends ConsensusBaseProcessor {
         Integer chainId = Integer.parseInt(args[1]);
         String consensusPubKey = args[2];
         Short updateType = Short.parseShort(args[3]);
-        Map<String, Object> req = new HashMap<>();
-        req.put("chainId", chainId);
-        req.put("consensusPubKey", consensusPubKey);
-        req.put("updateType", updateType);
+        UpdateNet req = new UpdateNet();
+        req.setChainId( chainId);
+        req.setUpdateType(updateType);
+        req.setConsensusPubKey(consensusPubKey);
         Result<Boolean> result = provider.updateNet(req);
         if (result.isFailed()) {
             return CommandResult.getFailed(result);

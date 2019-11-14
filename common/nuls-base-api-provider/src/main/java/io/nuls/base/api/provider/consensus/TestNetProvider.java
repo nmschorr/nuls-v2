@@ -16,8 +16,8 @@ public interface TestNetProvider {
 
 
     Result<Boolean> initNet(InitNet req);
-    Result<Boolean> cleanNet(Map<String,Object> req);
-    Result<Boolean> updateNet(Map<String,Object> req);
+    Result<Boolean> cleanNet(UpdateNet req);
+    Result<Boolean> updateNet(UpdateNet req);
 
 
 }

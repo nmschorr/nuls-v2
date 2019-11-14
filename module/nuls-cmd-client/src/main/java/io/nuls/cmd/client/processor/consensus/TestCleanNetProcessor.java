@@ -27,6 +27,7 @@ package io.nuls.cmd.client.processor.consensus;
 import io.nuls.base.api.provider.Result;
 import io.nuls.base.api.provider.ServiceManager;
 import io.nuls.base.api.provider.consensus.TestNetProvider;
+import io.nuls.base.api.provider.consensus.facade.UpdateNet;
 import io.nuls.cmd.client.CommandBuilder;
 import io.nuls.cmd.client.CommandResult;
 import io.nuls.core.core.annotation.Component;
@@ -70,8 +71,8 @@ public class TestCleanNetProcessor extends ConsensusBaseProcessor {
     @Override
     public CommandResult execute(String[] args) {
         Integer chainId = Integer.parseInt(args[1]);
-        Map<String,Object> req=new HashMap<>();
-        req.put("chainId",chainId);
+        UpdateNet req=new UpdateNet();
+        req.setChainId(chainId);
         Result<Boolean> result = provider.cleanNet(req);
         if (result.isFailed()) {
             return CommandResult.getFailed(result);
