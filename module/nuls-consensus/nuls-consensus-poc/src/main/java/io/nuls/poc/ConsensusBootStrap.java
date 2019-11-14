@@ -2,6 +2,7 @@ package io.nuls.poc;
 
 import io.nuls.base.basic.AddressTool;
 import io.nuls.base.protocol.ModuleHelper;
+import io.nuls.base.protocol.ProtocolGroupManager;
 import io.nuls.base.protocol.RegisterHelper;
 import io.nuls.core.core.annotation.Autowired;
 import io.nuls.core.core.annotation.Component;
@@ -124,6 +125,10 @@ public class ConsensusBootStrap extends RpcModule {
                 for (Chain chain : chainManager.getChainMap().values()) {
                     CallMethodUtils.sendState(chain, chain.isPacker());
                 }
+            }
+            //网络消息注册
+            if (ModuleE.NW.abbr.equals(module.getName())) {
+                RegisterHelper.registerMsg(ProtocolGroupManager.getOneProtocol());
             }
             //协议注册
             if (module.getName().equals(ModuleE.PU.abbr)) {
