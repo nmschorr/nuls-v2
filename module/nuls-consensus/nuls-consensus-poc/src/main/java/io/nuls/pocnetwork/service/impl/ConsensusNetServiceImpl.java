@@ -100,7 +100,9 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
                 LoggerUtil.commonLog.debug("*********");
                 LoggerUtil.commonLog.debug("========pubkey={}", entry2.getKey());
                 LoggerUtil.commonLog.debug("========nodeId={}", entry2.getValue().getNodeId());
+                LoggerUtil.commonLog.debug("========connected={}", entry2.getValue().isHadConnect());
             }
+            LoggerUtil.commonLog.debug("==================================================");
         }
         for (Map.Entry<Integer, ConsensusKeys> entry : CONSENSUSKEYS_MAP.entrySet()) {
             Integer chainId = entry.getKey();
