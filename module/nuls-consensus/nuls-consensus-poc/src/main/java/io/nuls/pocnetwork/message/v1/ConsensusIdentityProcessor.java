@@ -99,7 +99,9 @@ public class ConsensusIdentityProcessor implements MessageProcessor {
     @Override
     public void process(int chainId, String nodeId, String msgStr) {
         Chain chain = chainManager.getChainMap().get(chainId);
+        chain.getLogger().debug("recv csIndentity msg");
         ConsensusIdentitiesMsg message = RPCUtil.getInstanceRpcStr(msgStr, ConsensusIdentitiesMsg.class);
+        chain.getLogger().debug("msgHash={} recv from node={}", message.getMsgHash().toHex(),nodeId);
         if (duplicateMsg(message)) {
             chain.getLogger().debug("msgHash={} is duplicate,drop msg", message.getMsgHash().toHex());
             return;
@@ -124,10 +126,12 @@ public class ConsensusIdentityProcessor implements MessageProcessor {
                 return;
             }
             String consensusNetNodeId = consensusNet.getNodeId();
+            chain.getLogger().debug("begin connect {}",consensusNetNodeId);
             boolean isConnect = networkService.connectPeer(chainId, consensusNetNodeId);
             if (!isConnect) {
                 chain.getLogger().warn("connect fail .nodeId = {}", consensusNet.getNodeId());
             }else{
+                chain.getLogger().debug("connect {} success",consensusNetNodeId);
                 List<String> ips = new ArrayList<>();
                 ips.add(consensusNet.getNodeId().split(":")[0]);
                 networkService.addIps(chainId,"POC",ips);
@@ -135,12 +139,15 @@ public class ConsensusIdentityProcessor implements MessageProcessor {
             //更新共识连接组,并且返回之前未连接
             if (!consensusNetService.updateConsensusNode(chainId, consensusNet, isConnect)) {
                 //向对方发送身份信息
+                chain.getLogger().debug("bengin sendIdentityMessage {} success",consensusNetNodeId);
                 networkService.sendIdentityMessage(chainId, consensusNetNodeId,consensusNet.getPubKey());
             }
         }
         if (message.isBroadcast()) {
 //        广播转发消息
+            chain.getLogger().debug("bengin broadCastIdentityMsg exclude={} success",nodeId);
             networkService.broadCastIdentityMsg(chainId, getCmd(), msgStr, nodeId);
         }
+        chain.getLogger().debug("=====================consensusIdentityProcessor deal end");
     }
 }

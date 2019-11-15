@@ -91,7 +91,8 @@ public class NetworkServiceImpl implements NetworkService {
         }
         return false;
     }
-    private String getSelfNodeId(int chainId) {
+    @Override
+    public String getSelfNodeId(int chainId) {
         Chain chain = chainManager.getChainMap().get(chainId);
         try {
             Map<String, Object> params = new HashMap<>(2);

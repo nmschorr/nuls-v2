@@ -25,6 +25,7 @@
 package io.nuls.network.manager;
 
 import io.nuls.network.constant.NetworkConstant;
+import io.nuls.network.utils.LoggerUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +68,14 @@ public class BusinessGroupManager {
         }
         for (String node : ips) {
             map.put(node, node);
+        }
+    }
+
+    public void printGroupsInfo(int chainId, String moduleName, String flag) {
+        String key = chainId + NetworkConstant.DOWN_LINE + moduleName + NetworkConstant.DOWN_LINE + flag;
+        Map<String, String> map = businessGroupMap.get(key);
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            LoggerUtil.logger(chainId).info("{} ip={}", key, entry.getKey());
         }
     }
 

@@ -46,7 +46,7 @@ public class ConsensusIdentitiesMsg extends BaseBusinessMessage {
     private boolean isBroadcast = false;
     private long messageTime;
     /**
-     * 不作序列化
+     * 不作序列化,本地节点数据
      */
     private ConsensusNet consensusNet;
 
@@ -58,13 +58,10 @@ public class ConsensusIdentitiesMsg extends BaseBusinessMessage {
         super();
     }
 
-    public void addEncryptNodes(byte[] pubKey) {
-        try {
-            NodeIdentity nodeIdentity = new NodeIdentity(ECIESUtil.encrypt(pubKey, consensusNet.serialize()), pubKey);
-            identityList.add(nodeIdentity);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public void addEncryptNodes(byte[] pubKey) throws IOException {
+        NodeIdentity nodeIdentity = new NodeIdentity(ECIESUtil.encrypt(pubKey, consensusNet.serialize()), pubKey);
+        identityList.add(nodeIdentity);
+
     }
 
     @Override
@@ -139,7 +136,11 @@ public class ConsensusIdentitiesMsg extends BaseBusinessMessage {
         ConsensusNet consensusNet = new ConsensusNet(key.getPubKey(), "192.168.1.256:8005");
         ConsensusIdentitiesMsg consensusIdentity = new ConsensusIdentitiesMsg(consensusNet);
         ECKey key1 = new ECKey();
-        consensusIdentity.addEncryptNodes(key1.getPubKey());
+        try {
+            consensusIdentity.addEncryptNodes(key1.getPubKey());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         ECKey key2 = new ECKey();
         System.out.println(consensusIdentity.getDecryptConsensusNet(key.getPrivKeyBytes(), key.getPubKey()));
         System.out.println(consensusIdentity.getDecryptConsensusNet(key1.getPrivKeyBytes(), key1.getPubKey()).getNodeId());

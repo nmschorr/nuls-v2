@@ -57,14 +57,17 @@ import io.nuls.core.rpc.model.ModuleE;
 import io.nuls.core.rpc.model.message.Response;
 import io.nuls.core.rpc.netty.processor.ResponseMessageProcessor;
 import io.nuls.poc.model.bo.Chain;
+import io.nuls.poc.utils.LoggerUtil;
 import io.nuls.poc.utils.manager.ChainManager;
 import io.nuls.pocnetwork.constant.NetworkCmdConstant;
 import io.nuls.pocnetwork.model.ConsensusKeys;
 import io.nuls.pocnetwork.model.ConsensusNet;
 import io.nuls.pocnetwork.model.ConsensusNetGroup;
+import io.nuls.pocnetwork.model.message.ConsensusIdentitiesMsg;
 import io.nuls.pocnetwork.service.ConsensusNetService;
 import io.nuls.pocnetwork.service.NetworkService;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -86,6 +89,29 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     static Map<Integer, ConsensusKeys> CONSENSUSKEYS_MAP = new ConcurrentHashMap<>();
     static final short ADD_CONSENSUS = 1;
     static final short DEL_CONSENSUS = 2;
+
+    @Override
+    public void printTestInfo() {
+        for (Map.Entry<Integer, ConsensusNetGroup> entry : GROUPS_MAP.entrySet()) {
+            Integer chainId = entry.getKey();
+            LoggerUtil.commonLog.debug("GROUPS_MAP========chainId={}", chainId);
+            ConsensusNetGroup consensusNetGroup = entry.getValue();
+            for (Map.Entry<String, ConsensusNet> entry2 : consensusNetGroup.getGroup().entrySet()) {
+                LoggerUtil.commonLog.debug("*********");
+                LoggerUtil.commonLog.debug("========pubkey={}", entry2.getKey());
+                LoggerUtil.commonLog.debug("========nodeId={}", entry2.getValue().getNodeId());
+                LoggerUtil.commonLog.debug("========connected={}", entry2.getValue().isHadConnect());
+            }
+            LoggerUtil.commonLog.debug("==================================================");
+        }
+        for (Map.Entry<Integer, ConsensusKeys> entry : CONSENSUSKEYS_MAP.entrySet()) {
+            Integer chainId = entry.getKey();
+            LoggerUtil.commonLog.debug("CONSENSUSKEYS_MAP========chainId={}", chainId);
+            ConsensusKeys consensusKeys = entry.getValue();
+            LoggerUtil.commonLog.debug("========pubkey={}", HexUtil.encode(consensusKeys.getPubKey()));
+            LoggerUtil.commonLog.debug("========privkey={}", HexUtil.encode(consensusKeys.getPrivKey()));
+        }
+    }
 
     /**
      * @param consensusPubKey
@@ -109,23 +135,56 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
         return true;
     }
 
+    /**
+     * 启动或者自身跃迁为共识节点时候调用。
+     *
+     * @param chainId
+     * @param selfPubKey
+     * @param selfPrivKey
+     * @param consensusPubKeyList
+     * @return
+     */
     @Override
     public boolean initConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusPubKeyList) {
+        Chain chain = chainManager.getChainMap().get(chainId);
         ConsensusNetGroup group = new ConsensusNetGroup(chainId);
         ConsensusKeys consensusKeys = new ConsensusKeys(selfPubKey, selfPrivKey);
+
+        String nodeId = networkService.getSelfNodeId(chainId);
+        chain.getLogger().debug("self nodeId:{}", nodeId);
+//        nodeId = "112.0.52.247:8001";
+        ConsensusNet selfConsensusNet = new ConsensusNet();
+        selfConsensusNet.setPubKey(consensusKeys.getPubKey());
+        selfConsensusNet.setNodeId(nodeId);
+        ConsensusIdentitiesMsg consensusIdentitiesMsg = new ConsensusIdentitiesMsg(selfConsensusNet);
+        consensusIdentitiesMsg.setBroadcast(true);
         for (byte[] consensusPubKey : consensusPubKeyList) {
             if (!ArraysTool.arrayEquals(consensusPubKey, selfPubKey)) {
                 ConsensusNet consensusNet = new ConsensusNet(consensusPubKey, null);
                 group.addConsensus(consensusNet);
+                try {
+                    consensusIdentitiesMsg.addEncryptNodes(consensusPubKey);
+                } catch (Exception e) {
+                    chain.getLogger().error(e);
+                    return false;
+                }
             }
         }
         GROUPS_MAP.put(chainId, group);
         CONSENSUSKEYS_MAP.put(chainId, consensusKeys);
+        //广播身份消息
+        try {
+            networkService.broadCastIdentityMsg(chainId, NetworkCmdConstant.POC_IDENTITY_MESSAGE,
+                    HexUtil.encode(consensusIdentitiesMsg.serialize()), null);
+        } catch (IOException e) {
+            chain.getLogger().error(e);
+            return false;
+        }
         return true;
     }
 
     @Override
-    public void clearConsensusNetwork(int chainId) {
+    public void cleanConsensusNetwork(int chainId) {
         GROUPS_MAP.remove(chainId);
         CONSENSUSKEYS_MAP.remove(chainId);
     }
@@ -151,11 +210,12 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     public boolean updateConsensusNode(int chainId, ConsensusNet consensusNet, boolean isConnect) {
         ConsensusNetGroup consensusNetGroup = GROUPS_MAP.get(chainId);
         ConsensusNet consensusNet1 = consensusNetGroup.getGroup().get(HexUtil.encode(consensusNet.getPubKey()));
-        boolean orgConn = (consensusNet1.getNodeId().equals(consensusNet.getNodeId())) && consensusNet1.isHadConnect();
+        boolean orgConn = (null != consensusNet1.getNodeId() && consensusNet1.getNodeId().equals(consensusNet.getNodeId())) && consensusNet1.isHadConnect();
         consensusNet1.setNodeId(consensusNet.getNodeId());
         consensusNet1.setHadConnect(isConnect);
         return orgConn;
     }
+
 
     /**
      * 广播共识消息返回已发送连接列表

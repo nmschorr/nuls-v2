@@ -43,4 +43,6 @@ public interface NetworkService {
     boolean sendIdentityMessage(int chainId, String peerNodeId, byte[] pubKey);
 
     boolean broadCastIdentityMsg(int chainId, String command, String msgStr, String excludeNodeId);
+
+    String getSelfNodeId(int chainId);
 }

@@ -81,7 +81,7 @@ public class ConsensusNetGroup {
     public String removeConsensus(byte[] consensusPubKey) {
         String key = HexUtil.encode(consensusPubKey);
         ConsensusNet consensusNet= group.get(key);
-        if(null != consensusNet){
+        if(null == consensusNet){
           return null;
         }
         group.remove(key);
