@@ -6,8 +6,6 @@ import io.nuls.poc.utils.thread.process.ConsensusProcess;
 import io.nuls.core.core.annotation.Component;
 import io.nuls.core.thread.ThreadUtils;
 import io.nuls.core.thread.commom.NulsThreadFactory;
-import io.nuls.pocnetwork.task.TestDebugTask;
-
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -35,8 +33,6 @@ public class SchedulerManager {
         */
         ConsensusProcess consensusProcess = new ConsensusProcess();
         scheduledThreadPoolExecutor.scheduleAtFixedRate(new ConsensusProcessTask(chain,consensusProcess),1000L,100L, TimeUnit.MILLISECONDS);
-        scheduledThreadPoolExecutor.scheduleAtFixedRate(new TestDebugTask(),1000L,1000L, TimeUnit.MILLISECONDS);
-
         chain.setScheduledThreadPoolExecutor(scheduledThreadPoolExecutor);
     }
 }
