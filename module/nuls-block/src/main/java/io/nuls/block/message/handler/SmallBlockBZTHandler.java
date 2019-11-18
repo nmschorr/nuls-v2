@@ -190,7 +190,7 @@ public class SmallBlockBZTHandler implements MessageProcessor {
             Block block = BlockUtil.assemblyBlock(header, txMap, txHashList);
             block.setNodeId(nodeId);
             logger.debug("record recv BZT block, block create time-" + DateUtils.timeStamp2DateStr(block.getHeader().getTime() * 1000) + ", hash-" + block.getHeader().getHash());
-            boolean b = blockService.saveConsensusBlock(chainId, block, 1, true, false, true);
+            boolean b = blockService.saveConsensusBlock(chainId, block, 1, true, true, false,nodeId);
             if (!b) {
                 SmallBlockCacher.setStatus(chainId, blockHash, ERROR);
             }

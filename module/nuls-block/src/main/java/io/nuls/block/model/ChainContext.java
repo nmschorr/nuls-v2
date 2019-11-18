@@ -30,6 +30,7 @@ import io.nuls.block.thread.monitor.TxGroupRequestor;
 import io.nuls.block.utils.LoggerUtil;
 import io.nuls.block.utils.SingleBlockCacher;
 import io.nuls.block.utils.SmallBlockCacher;
+import io.nuls.core.basic.Result;
 import io.nuls.core.log.logback.NulsLogger;
 import io.nuls.core.model.CollectionUtils;
 
@@ -136,6 +137,15 @@ public class ChainContext {
      * 处理区块的拜占庭校验与基础校验的结果
      */
     private Map<NulsHash, Byte> savingBZTAndVerify = new ConcurrentHashMap<>(100);
+    private Map<NulsHash, Result> blockVerifyResult = new ConcurrentHashMap<>(100);
+
+    public Map<NulsHash, Result> getBlockVerifyResult() {
+        return blockVerifyResult;
+    }
+
+    public void setBlockVerifyResult(Map<NulsHash, Result> blockVerifyResult) {
+        this.blockVerifyResult = blockVerifyResult;
+    }
 
     public Map<NulsHash, Byte> getSavingBZTAndVerify() {
         return savingBZTAndVerify;

@@ -276,17 +276,17 @@ public class BlockServiceImpl implements BlockService {
 
     @Override
     public boolean saveBlock(int chainId, Block block, boolean needLock) {
-        return saveBlock(chainId, block, false, 0, needLock, false, false);
+        return saveBlock(chainId, block, false, 0, needLock, false, false,false,null);
     }
 
     @Override
-    public boolean saveConsensusBlock(int chainId, Block block, int download, boolean needLock, boolean broadcast, boolean forward) {
-        return saveConsensusBlock(chainId, block, false, download, needLock, broadcast, forward);
+    public boolean saveConsensusBlock(int chainId, Block block, int download, boolean needLock, boolean broadcast, boolean forward,String nodeId) {
+        return saveBlock(chainId, block, false, download, needLock, broadcast, forward,true,nodeId);
     }
 
     @Override
     public boolean saveBlock(int chainId, Block block, int download, boolean needLock, boolean broadcast, boolean forward) {
-        return saveBlock(chainId, block, false, download, needLock, broadcast, forward);
+        return saveBlock(chainId, block, false, download, needLock, broadcast, forward,false,null);
     }
 
 
@@ -308,14 +308,24 @@ public class BlockServiceImpl implements BlockService {
     }
 
     @Override
-    public void putBlockBZT(int chainId, NulsHash hash,boolean bztResult) {
-        if(bztResult){
+    public void putBlockBZT(int chainId, NulsHash hash, boolean bztResult) {
+        if (bztResult) {
             putBlockVerifyOrBZT(chainId, hash, (byte) BZT_FLAG);
-        }else{
+        } else {
             //拜占庭失败，进行信息清理
-            clearConsensusFlag(chainId,hash);
+            clearConsensusFlag(chainId, hash);
         }
 
+    }
+
+    private void putBlockBasicVerifyResult(int chainId, NulsHash hash, Result value) {
+        Map<NulsHash, Result> mapBasicVerify = ContextManager.getContext(chainId).getBlockVerifyResult();
+        mapBasicVerify.put(hash, value);
+    }
+
+    private Result getBlockBasicVerifyResult(int chainId, NulsHash hash) {
+        Map<NulsHash, Result> mapBasicVerify = ContextManager.getContext(chainId).getBlockVerifyResult();
+        return mapBasicVerify.get(hash);
     }
 
     private synchronized void putBlockVerifyOrBZT(int chainId, NulsHash hash, byte value) {
@@ -347,13 +357,16 @@ public class BlockServiceImpl implements BlockService {
 
     private void clearConsensusFlag(int chainId, NulsHash hash) {
         Map<NulsHash, Byte> map = ContextManager.getContext(chainId).getSavingBZTAndVerify();
+        Map<NulsHash, Result> mapBasicVerify = ContextManager.getContext(chainId).getBlockVerifyResult();
         map.remove(hash);
+        mapBasicVerify.remove(hash);
     }
 
     /**
      * 拜占庭与区块校验标识处理=================================end
      **/
-    private boolean saveBlock(int chainId, Block block, boolean localInit, int download, boolean needLock, boolean broadcast, boolean forward) {
+    private boolean saveBlock(int chainId, Block block, boolean localInit, int download, boolean needLock,
+                              boolean broadcast, boolean forward, boolean isBzt, String nodeId) {
         long startTime = System.nanoTime();
         ChainContext context = ContextManager.getContext(chainId);
         NulsLogger logger = context.getLogger();
@@ -366,21 +379,54 @@ public class BlockServiceImpl implements BlockService {
             l = lock.writeLock();
         }
         try {
-            //1.验证区块
-            Result result = verifyBlock(chainId, block, localInit, download);
-            if (result.isFailed()) {
-                logger.debug("verifyBlock fail! height-" + height);
-                return false;
+            //默认不进行拜占庭校验
+            boolean byzantine = false;
+            //默认必须基础校验
+            boolean basicVerify = true;
+            if (isBzt) {
+                //还未bzt过
+                if (!isVerifyBZT(chainId, hash)) {
+                    byzantine = true;
+                }
+
+            }
+            if (isVerifyBlock(chainId, hash)) {
+                //已经基础校验过
+                basicVerify = false;
+            }
+            //基础与bzt存在一个
+            if (basicVerify || byzantine) {
+                //1.验证区块
+                Result result = verifyBlock(chainId, block, localInit, download, basicVerify, byzantine, nodeId);
+                if (result.isFailed()) {
+                    logger.debug("verifyBlock fail! height-" + height);
+                    return false;
+                } else {
+                    //成功进行基础校验置位
+                    if (basicVerify) {
+                        putBlockVerifyOrBZT(chainId, hash, (byte) BLOCK_FLAG);
+                        putBlockBasicVerifyResult(chainId, hash, result);
+                    }
+                }
             }
             //同步\链切换\孤儿链对接过程中不进行区块广播
             if (download == 1) {
                 SmallBlockCacher.setStatus(chainId, hash, COMPLETE);
-                if (broadcast) {
+                if (byzantine && broadcast) {
+                    broadcastPocNetBlock(chainId, block);
+                }else if(broadcast){
                     broadcastBlock(chainId, block);
                 }
                 if (forward) {
                     forwardBlock(chainId, hash, null);
                 }
+            }
+            /**
+             * 拜占庭没完成，先返回等待
+             */
+            if (download == 1 && !isVerifyBZTAndBlock(chainId, hash)) {
+                logger.debug("wait for BZTAndBlock! bzt={} block={},height-{}", isVerifyBZT(chainId, hash), isVerifyBlock(chainId, hash), height);
+                return true;
             }
             //2.设置最新高度,如果失败则恢复上一个高度
             boolean setHeight = blockStorageService.setLatestHeight(chainId, height);
@@ -396,7 +442,8 @@ public class BlockServiceImpl implements BlockService {
             BlockHeaderPo blockHeaderPo = BlockUtil.toBlockHeaderPo(block);
             boolean headerSave;
             boolean txSave = false;
-            if (!(headerSave = blockStorageService.save(chainId, blockHeaderPo)) || !(txSave = TransactionCall.save(chainId, blockHeaderPo, block.getTxs(), localInit, (List) result.getData()))) {
+            Result blockBasicVerifyResult = getBlockBasicVerifyResult(chainId, hash);
+            if (!(headerSave = blockStorageService.save(chainId, blockHeaderPo)) || !(txSave = TransactionCall.save(chainId, blockHeaderPo, block.getTxs(), localInit, (List) blockBasicVerifyResult.getData()))) {
                 if (headerSave && !TransactionCall.rollback(chainId, blockHeaderPo)) {
                     throw new NulsRuntimeException(BlockErrorCode.TX_ROLLBACK_ERROR);
                 }
@@ -472,151 +519,8 @@ public class BlockServiceImpl implements BlockService {
             context.setNetworkHeight(height);
             long elapsedNanos = System.nanoTime() - startTime;
             //清除共识标识
-            clearConsensusFlag(chainId,hash);
+            clearConsensusFlag(chainId, hash);
             logger.info("save block success, time-" + (elapsedNanos / 1000000) + "ms, height-" + height + ", txCount-" + blockHeaderPo.getTxCount() + ", hash-" + hash + ", size-" + block.size());
-            return true;
-        } finally {
-            if (needLock) {
-                lock.unlockWrite(l);
-            }
-        }
-    }
-
-    private boolean saveConsensusBlock(int chainId, Block block, boolean localInit, int download, boolean needLock, boolean broadcast, boolean forward) {
-        long startTime = System.nanoTime();
-        ChainContext context = ContextManager.getContext(chainId);
-        NulsLogger logger = context.getLogger();
-        BlockHeader header = block.getHeader();
-        long height = header.getHeight();
-        NulsHash hash = header.getHash();
-        StampedLock lock = context.getLock();
-        long l = 0;
-        if (needLock) {
-            l = lock.writeLock();
-        }
-        try {
-            //1.验证区块
-            Result result = verifyBlock(chainId, block, localInit, download);
-            if (!isVerifyBlock(chainId, hash)) {
-                if (result.isFailed()) {
-                    logger.debug("verifyBlock fail! height-" + height);
-                    return false;
-                } else {
-                    putBlockVerifyOrBZT(chainId, hash, (byte) BLOCK_FLAG);
-                }
-            }
-            //同步\链切换\孤儿链对接过程中不进行区块广播
-            if (download == 1) {
-                SmallBlockCacher.setStatus(chainId, hash, COMPLETE);
-                if (broadcast) {
-                    if (isVerifyBZT(chainId, hash)) {
-                        broadcastBlock(chainId, block);
-                    } else {
-                        broadcastPocNetBlock(chainId, block);
-                    }
-                }
-                if (forward) {
-                    forwardBlock(chainId, hash, null);
-                }
-            }
-            /**
-             * 拜占庭没完成，先返回等待
-             */
-            if (!isVerifyBZTAndBlock(chainId, hash)) {
-                logger.debug("wait for BZTAndBlock! bzt={} block={},height-{}", isVerifyBZT(chainId, hash), isVerifyBlock(chainId, hash), height);
-                return true;
-            }
-            //2.设置最新高度,如果失败则恢复上一个高度
-            boolean setHeight = blockStorageService.setLatestHeight(chainId, height);
-            if (!setHeight) {
-                if (!blockStorageService.setLatestHeight(chainId, height - 1)) {
-                    throw new NulsRuntimeException(BlockErrorCode.UPDATE_HEIGHT_ERROR);
-                }
-                logger.error("setHeight false, height-" + height);
-                return false;
-            }
-
-            //3.保存区块头, 保存交易
-            BlockHeaderPo blockHeaderPo = BlockUtil.toBlockHeaderPo(block);
-            boolean headerSave;
-            boolean txSave = false;
-            if (!(headerSave = blockStorageService.save(chainId, blockHeaderPo)) || !(txSave = TransactionCall.save(chainId, blockHeaderPo, block.getTxs(), localInit, (List) result.getData()))) {
-                if (headerSave && !TransactionCall.rollback(chainId, blockHeaderPo)) {
-                    throw new NulsRuntimeException(BlockErrorCode.TX_ROLLBACK_ERROR);
-                }
-                if (!blockStorageService.remove(chainId, height)) {
-                    throw new NulsRuntimeException(BlockErrorCode.HEADER_REMOVE_ERROR);
-                }
-                if (!blockStorageService.setLatestHeight(chainId, height - 1)) {
-                    throw new NulsRuntimeException(BlockErrorCode.UPDATE_HEIGHT_ERROR);
-                }
-                logger.error("headerSave-" + headerSave + ", txsSave-" + txSave + ", height-" + height + ", hash-" + hash);
-                return false;
-            }
-            //4.通知共识模块
-            boolean csNotice = ConsensusCall.saveNotice(chainId, header, localInit);
-            if (!csNotice) {
-                if (!TransactionCall.rollback(chainId, blockHeaderPo)) {
-                    throw new NulsRuntimeException(BlockErrorCode.TX_ROLLBACK_ERROR);
-                }
-                if (!blockStorageService.remove(chainId, height)) {
-                    throw new NulsRuntimeException(BlockErrorCode.HEADER_REMOVE_ERROR);
-                }
-                if (!blockStorageService.setLatestHeight(chainId, height - 1)) {
-                    throw new NulsRuntimeException(BlockErrorCode.UPDATE_HEIGHT_ERROR);
-                }
-                logger.error("consensus notice fail! height-" + height);
-                return false;
-            }
-
-            //5.通知协议升级模块,完全保存,更新标记
-            blockHeaderPo.setComplete(true);
-            if (!ProtocolCall.saveNotice(chainId, header) || !blockStorageService.save(chainId, blockHeaderPo)) {
-                if (!ConsensusCall.rollbackNotice(chainId, height)) {
-                    throw new NulsRuntimeException(BlockErrorCode.CS_ROLLBACK_ERROR);
-                }
-                if (!TransactionCall.rollback(chainId, blockHeaderPo)) {
-                    throw new NulsRuntimeException(BlockErrorCode.TX_ROLLBACK_ERROR);
-                }
-                if (!blockStorageService.remove(chainId, height)) {
-                    throw new NulsRuntimeException(BlockErrorCode.HEADER_REMOVE_ERROR);
-                }
-                if (!blockStorageService.setLatestHeight(chainId, height - 1)) {
-                    throw new NulsRuntimeException(BlockErrorCode.UPDATE_HEIGHT_ERROR);
-                }
-                logger.error("ProtocolCall saveNotice fail! height-" + height);
-                return false;
-            }
-            try {
-                TransactionCall.heightNotice(chainId, height);
-                CrossChainCall.heightNotice(chainId, height, RPCUtil.encode(block.getHeader().serialize()));
-            } catch (Exception e) {
-                LoggerUtil.COMMON_LOG.error(e);
-            }
-
-            //6.如果不是第一次启动,则更新主链属性
-            if (!localInit) {
-                context.setLatestBlock(block);
-                Chain masterChain = BlockChainManager.getMasterChain(chainId);
-                masterChain.setEndHeight(masterChain.getEndHeight() + 1);
-                int heightRange = context.getParameters().getHeightRange();
-                Deque<NulsHash> hashList = masterChain.getHashList();
-                if (hashList.size() >= heightRange) {
-                    hashList.removeFirst();
-                }
-                hashList.addLast(hash);
-            }
-            Response response = MessageUtil.newSuccessResponse("");
-            Map<String, Long> responseData = new HashMap<>(2);
-            responseData.put("value", height);
-            Map<String, Object> sss = new HashMap<>(2);
-            sss.put(LATEST_HEIGHT, responseData);
-            response.setResponseData(sss);
-            ConnectManager.eventTrigger(LATEST_HEIGHT, response);
-            context.setNetworkHeight(height);
-            long elapsedNanos = System.nanoTime() - startTime;
-            logger.info("save block success, time-" + (elapsedNanos / 1000000) + "ms, height-" + height + ", txCount-" + blockHeaderPo.getTxCount() + ", hash-" + hash + ", size-" + block.size());
-            clearConsensusFlag(chainId,hash);
             return true;
         } finally {
             if (needLock) {
@@ -792,7 +696,8 @@ public class BlockServiceImpl implements BlockService {
         return broadcast;
     }
 
-    private Result verifyBlock(int chainId, Block block, boolean localInit, int download) {
+    private Result verifyBlock(int chainId, Block block, boolean localInit, int download,
+                               boolean needBasicVerify, boolean needByzantineVerify, String nodeId) {
         ChainContext context = ContextManager.getContext(chainId);
         NulsLogger logger = context.getLogger();
         BlockHeader header = block.getHeader();
@@ -820,7 +725,7 @@ public class BlockServiceImpl implements BlockService {
             return Result.getFailed(BlockErrorCode.BLOCK_VERIFY_ERROR);
         }
         //共识验证
-        Result consensusVerify = ConsensusCall.verify(chainId, block, download);
+        Result consensusVerify = ConsensusCall.verifyCs(chainId, block, nodeId, download, needBasicVerify, needByzantineVerify);
         if (consensusVerify.isFailed()) {
             logger.error("consensusVerify-" + consensusVerify);
             return Result.getFailed(BlockErrorCode.BLOCK_VERIFY_ERROR);
@@ -853,7 +758,8 @@ public class BlockServiceImpl implements BlockService {
                         genesisBlock = GenesisBlock.getInstance(chainId, chainParameters.getAssetId(), Files.readString(Path.of(configFile, value)));
                     }
                 }
-                boolean b = saveBlock(chainId, genesisBlock, true, 0, false, false, false);
+                putBlockBZT(chainId,genesisBlock.getHeader().getHash(),true);
+                boolean b = saveBlock(chainId, genesisBlock, true, 0, false, false, false,false,null);
                 if (!b) {
                     throw new NulsRuntimeException(BlockErrorCode.SAVE_GENESIS_ERROR);
                 }

@@ -93,30 +93,35 @@ public class ConsensusCall {
      * 共识BZT验证
      *
      * @param chainId
-     * @param smallBlock
+     * @param block
      * @param nodeId
      * @return
      */
-    public static Result verifyBZT(int chainId, SmallBlock smallBlock, String nodeId) {
+    public static Result verifyCs(int chainId, Block block, String nodeId,int download,
+                                   boolean basicVerify,boolean byzantineVerify) {
         NulsLogger logger = ContextManager.getContext(chainId).getLogger();
         try {
             Map<String, Object> params = new HashMap<>(3);
             params.put(Constants.CHAIN_ID, chainId);
-            params.put("smallBlock", RPCUtil.encode(smallBlock.serialize()));
+            params.put("block", RPCUtil.encode(block.serialize()));
             params.put("nodeId", nodeId);
-            Response response = ResponseMessageProcessor.requestAndResponse(ModuleE.CS.abbr, "cs_validBlockBZT", params);
+            params.put("download", download);
+            params.put("basicVerify", basicVerify);
+            params.put("byzantineVerify", byzantineVerify);
+            Response response = ResponseMessageProcessor.requestAndResponse(ModuleE.CS.abbr, "cs_validBlock", params);
             if (response.isSuccess()) {
                 Map responseData = (Map) response.getResponseData();
-                Map v = (Map) responseData.get("cs_validBlockBZT");
+                Map v = (Map) responseData.get("cs_validBlock");
                 boolean value = (Boolean) v.get("value");
                 if (value) {
-                    return Result.getSuccess(BlockErrorCode.SUCCESS);
+                    List contractList = (List) v.get("contractList");
+                    return Result.getSuccess(BlockErrorCode.SUCCESS).setData(contractList);
                 }
             }
             return Result.getFailed(ErrorCode.init(response.getResponseErrorCode()));
         } catch (Exception e) {
             logger.error("", e);
-            return Result.getFailed(BlockErrorCode.BLOCK_VERIFY_BZT_ERROR);
+            return Result.getFailed(BlockErrorCode.BLOCK_VERIFY_ERROR);
         }
     }
 

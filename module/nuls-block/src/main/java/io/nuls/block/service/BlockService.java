@@ -174,7 +174,7 @@ public interface BlockService {
      */
     boolean saveBlock(int chainId, Block block, int download, boolean needLock, boolean broadcast, boolean forward);
 
-    boolean saveConsensusBlock(int chainId, Block block, int download, boolean needLock, boolean broadcast, boolean forward);
+    boolean saveConsensusBlock(int chainId, Block block, int download, boolean needLock, boolean broadcast, boolean forward,String nodeId);
 
     /**
      * 回滚区块,已经考虑失败回滚操作,不抛出异常情况下,不会有垃圾数据
