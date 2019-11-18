@@ -60,13 +60,14 @@ public class EconomicManager {
         */
         BigDecimal totalAll =calcRoundConsensusReward(roundInfo,consensusConfig).setScale(2, 1);
         Log.info("本轮次出块数量{}，本轮奖励总额：{}",roundInfo.getMemberCount(),totalAll );
-        BigInteger selfAllDeposit = agentInfo.getDeposit().add(agentInfo.getTotalDeposit());
+        /*todo BigInteger selfAllDeposit = agentInfo.getDeposit().add(agentInfo.getTotalDeposit());*/
+        BigInteger selfAllDeposit = BigInteger.ZERO;
         BigDecimal agentWeight = DoubleUtils.mul(new BigDecimal(selfAllDeposit), agentInfo.getCreditVal());
-        if (roundInfo.getTotalWeight() > 0 && agentWeight.doubleValue() > 0) {
-            /*
+        /*if (roundInfo.getTotalWeight() > 0 && agentWeight.doubleValue() > 0) {
+            *//*
             本节点共识奖励 = 节点权重/本轮次权重*共识基础奖励
             Node Consensus Award = Node Weight/Round Weight*Consensus Foundation Award
-            */
+            *//*
             BigInteger consensusReword = DoubleUtils.mul(totalAll, DoubleUtils.div(agentWeight, roundInfo.getTotalWeight())).toBigInteger();
             String assetKey = consensusConfig.getChainId() + NulsEconomicConstant.SEPARATOR + consensusConfig.getAwardAssetId();
             if(awardAssetMap.keySet().contains(assetKey)){
@@ -74,7 +75,7 @@ public class EconomicManager {
             }else{
                 awardAssetMap.put(assetKey, consensusReword);
             }
-        }
+        }*/
         if(awardAssetMap == null || awardAssetMap.isEmpty()){
             return rewardList;
         }
@@ -98,26 +99,26 @@ public class EconomicManager {
      * */
     private static Map<String,BigDecimal> getDepositWeight(AgentInfo agentInfo,BigInteger totalDeposit){
         Map<String,BigDecimal> depositWeightMap = new HashMap<>(NulsEconomicConstant.VALUE_OF_16);
-        BigDecimal commissionRate = new BigDecimal(DoubleUtils.div(agentInfo.getCommissionRate(), 100, 2));
+        /*todo BigDecimal commissionRate = new BigDecimal(DoubleUtils.div(agentInfo.getCommissionRate(), 100, 2));
         if(commissionRate.compareTo(BigDecimal.ONE) >= 0){
             depositWeightMap.put(AddressTool.getStringAddressByBytes(agentInfo.getRewardAddress()), BigDecimal.ONE);
             return depositWeightMap;
         }
         BigDecimal depositRate = new BigDecimal(1).subtract(commissionRate);
         BigInteger creatorDeposit = agentInfo.getDeposit();
-        /*
+        *//*
         计算各委托账户获得的奖励金
         Calculate the rewards for each entrusted account
-        */
+        *//*
         for (DepositInfo deposit : agentInfo.getDepositList()) {
             if(ArraysTool.arrayEquals(agentInfo.getRewardAddress(), deposit.getAddress())){
                 creatorDeposit = creatorDeposit.add(deposit.getDeposit());
                 continue;
             }
-            /*
+            *//*
             计算各委托账户权重（委托金额/总的委托金)
             Calculate the weight of each entrusted account (amount of entrusted account/total entrusted fee)
-            */
+            *//*
             String depositAddress = AddressTool.getStringAddressByBytes(deposit.getAddress());
             BigDecimal depositWeight = new BigDecimal(deposit.getDeposit()).divide(new BigDecimal(totalDeposit), 8, RoundingMode.HALF_DOWN).multiply(depositRate);
             if(depositWeightMap.keySet().contains(depositAddress)){
@@ -132,7 +133,7 @@ public class EconomicManager {
         BigDecimal creatorCommissionWeight = BigDecimal.ONE.subtract(creatorWeight).multiply(commissionRate);
         creatorWeight = creatorWeight.add(creatorCommissionWeight);
         depositWeightMap.put(AddressTool.getStringAddressByBytes(agentInfo.getRewardAddress()), creatorWeight);
-        Log.debug("区块权重分配：{}",depositWeightMap.toString());
+        Log.debug("区块权重分配：{}",depositWeightMap.toString());*/
         return depositWeightMap;
     }
 
@@ -170,7 +171,8 @@ public class EconomicManager {
         BigDecimal totalAll = BigDecimal.ZERO;
         //区块时间是出块结束时间，所以轮次出的第一个块时间是轮次开始时间+出块间隔时间
         long roundStartTime = roundInfo.getRoundStartTime() + consensusConfig.getPackingInterval();
-        long roundEndTime = roundInfo.getRoundEndTime();
+        //long roundEndTime = roundInfo.getRoundEndTime();
+        long roundEndTime = 0;
 
         InflationInfo inflationInfo = getInflationInfo(consensusConfig, roundStartTime);
         if(roundEndTime <= inflationInfo.getEndTime()){

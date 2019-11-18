@@ -12,8 +12,7 @@
   <packaging>pom</packaging>
   <name>nuls-consensus</name>
   <modules>
-    <module>nuls-consensus-poc</module>
     <module>economic-model</module>
+    <module>nuls-consensus-pocbft</module>
   </modules>
-
 </project>

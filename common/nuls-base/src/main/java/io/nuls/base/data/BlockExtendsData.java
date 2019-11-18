@@ -87,7 +87,11 @@ public class BlockExtendsData extends BaseNulsData {
 
     private byte[] nextSeedHash;
 
-    public BlockExtendsData() {
+    public BlockExtendsData(long roundIndex, int consensusMemberCount, long roundStartTime, int packingIndexOfRound) {
+        this.roundIndex = roundIndex;
+        this.consensusMemberCount = consensusMemberCount;
+        this.roundStartTime = roundStartTime;
+        this.packingIndexOfRound = packingIndexOfRound;
     }
 
     public BlockExtendsData(byte[] extend) {
@@ -96,6 +100,10 @@ public class BlockExtendsData extends BaseNulsData {
         } catch (NulsException e) {
             Log.error(e);
         }
+    }
+
+    public BlockExtendsData(){
+
     }
 
     public short getMainVersion() {
