@@ -139,4 +139,15 @@ public class TxType {
      */
     public static final int LEDGER_ASSET_REG_TRANSFER = 27;
 
+    /**
+     * 追加节点保证金
+     * Additional agent margin
+     * */
+    public static final int APPEND_AGENT_DEPOSIT = 28;
+
+    /**
+     * 撤销节点保证金
+     * Cancel agent deposit
+     * */
+    public static final int REDUCE_AGENT_DEPOSIT = 29;
 }
