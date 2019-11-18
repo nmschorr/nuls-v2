@@ -14,6 +14,7 @@ import io.nuls.core.constant.TxType;
 import io.nuls.core.core.annotation.Autowired;
 import io.nuls.core.core.annotation.Component;
 import io.nuls.core.exception.NulsRuntimeException;
+import io.nuls.core.log.Log;
 
 import java.math.BigInteger;
 import java.util.*;
@@ -104,7 +105,7 @@ public class SyncService {
         apiCache.setBestHeader(blockInfo.getHeader());
 
         time2 = System.currentTimeMillis();
-        LoggerUtil.commonLog.info("-----height finish:" + blockInfo.getHeader().getHeight() + "-----txCount:" + blockInfo.getHeader().getTxCount() + "-----use:" + (time2 - time1) + "-----");
+        //    LoggerUtil.commonLog.info("-----height finish:" + blockInfo.getHeader().getHeight() + "-----txCount:" + blockInfo.getHeader().getTxCount() + "-----use:" + (time2 - time1) + "-----");
         return true;
     }
 
@@ -340,6 +341,10 @@ public class SyncService {
         AgentInfo agentInfo = (AgentInfo) tx.getTxData();
         agentInfo.setNew(true);
         accountInfo.setConsensusLock(accountInfo.getConsensusLock().add(agentInfo.getDeposit()));
+
+        if (accountInfo.getAddress().equals("tNULSeBaMrNP548LVMEvppNThEjaMd2izU6jL6")) {
+            System.out.println("create agent,   Hash:" + tx.getHash() + ", lock:+" + agentInfo.getDeposit() + ", total: " + accountInfo.getConsensusLock() + ", txType:" + tx.getType() + ",  height" + tx.getHeight());
+        }
         //查询agent节点是否设置过别名
         AliasInfo aliasInfo = aliasService.getAliasByAddress(chainId, agentInfo.getAgentAddress());
         if (aliasInfo != null) {
@@ -362,6 +367,10 @@ public class SyncService {
         depositInfoList.add(depositInfo);
         accountInfo.setConsensusLock(accountInfo.getConsensusLock().add(depositInfo.getAmount()));
 
+        if (accountInfo.getAddress().equals("tNULSeBaMrNP548LVMEvppNThEjaMd2izU6jL6")) {
+            System.out.println("deposit,   Hash:" + tx.getHash() + ", lock:+" + depositInfo.getAmount() + ", total: " + accountInfo.getConsensusLock() + ", txType:" + tx.getType() + ",  height" + tx.getHeight());
+        }
+
         AgentInfo agentInfo = queryAgentInfo(chainId, depositInfo.getAgentHash(), 1);
         agentInfo.setTotalDeposit(agentInfo.getTotalDeposit().add(depositInfo.getAmount()));
         agentInfo.setNew(false);
@@ -379,6 +388,10 @@ public class SyncService {
         DepositInfo cancelInfo = (DepositInfo) tx.getTxData();
         DepositInfo depositInfo = depositService.getDepositInfoByKey(chainId, DBUtil.getDepositKey(cancelInfo.getTxHash(), accountInfo.getAddress()));
         accountInfo.setConsensusLock(accountInfo.getConsensusLock().subtract(depositInfo.getAmount()));
+
+        if (accountInfo.getAddress().equals("tNULSeBaMrNP548LVMEvppNThEjaMd2izU6jL6")) {
+            System.out.println("cancel deposit,   Hash:" + tx.getHash() + ", lock:-" + depositInfo.getAmount() + ", total: " + accountInfo.getConsensusLock() + ", txType:" + tx.getType() + ",  height" + tx.getHeight());
+        }
 
         cancelInfo.copyInfoWithDeposit(depositInfo);
         cancelInfo.setTxHash(tx.getHash());
@@ -428,6 +441,10 @@ public class SyncService {
                     ledgerInfo = queryLedgerInfo(chainId, output.getAddress(), output.getChainId(), output.getAssetsId());
                     txRelationInfoSet.add(new TxRelationInfo(output, tx, BigInteger.ZERO, ledgerInfo.getTotalBalance()));
                 }
+            }
+
+            if (accountInfo.getAddress().equals("tNULSeBaMrNP548LVMEvppNThEjaMd2izU6jL6")) {
+                System.out.println("stop agent,   Hash:" + tx.getHash() + ", lock:-" + output.getAmount() + ", total: " + accountInfo.getConsensusLock() + ", txType:" + tx.getType() + ",  height" + tx.getHeight());
             }
             addressSet.add(output.getAddress());
         }
@@ -487,7 +504,6 @@ public class SyncService {
         AccountInfo accountInfo;
         AccountLedgerInfo ledgerInfo;
         CoinToInfo output = null;
-        BigInteger amount = BigInteger.ZERO;
         addressSet.clear();
         for (int i = 0; i < tx.getCoinTos().size(); i++) {
             output = tx.getCoinTos().get(i);
@@ -508,6 +524,10 @@ public class SyncService {
                     ledgerInfo = queryLedgerInfo(chainId, output.getAddress(), output.getChainId(), output.getAssetsId());
                     txRelationInfoSet.add(new TxRelationInfo(output, tx, BigInteger.ZERO, ledgerInfo.getTotalBalance()));
                 }
+            }
+
+            if (accountInfo.getAddress().equals("tNULSeBaMrNP548LVMEvppNThEjaMd2izU6jL6")) {
+                System.out.println("red card,   Hash:" + tx.getHash() + ", lock:-" + output.getAmount() + ", total: " + accountInfo.getConsensusLock() + ", txType:" + tx.getType() + ",  height" + tx.getHeight());
             }
             addressSet.add(output.getAddress());
         }
