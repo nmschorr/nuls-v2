@@ -1,8 +1,10 @@
 package io.nuls.pocbft.utils.thread;
 import io.nuls.pocbft.cache.VoteCache;
+import io.nuls.pocbft.constant.CommandConstant;
 import io.nuls.pocbft.constant.ConsensusConstant;
 import io.nuls.pocbft.message.VoteMessage;
 import io.nuls.pocbft.model.bo.Chain;
+import io.nuls.pocbft.rpc.call.NetWorkCall;
 import io.nuls.pocbft.utils.manager.VoteManager;
 
 /**
@@ -21,7 +23,10 @@ public class StageTwoVoteCollector implements Runnable{
         while (true) {
             try {
                 VoteMessage message = VoteCache.CURRENT_ROUND_STAGE_TOW_MESSAGE_QUEUE.take();
-                VoteManager.statisticalResult(chain, message, ConsensusConstant.VOTE_STAGE_TWO);
+                if(VoteManager.statisticalResult(chain, message, ConsensusConstant.VOTE_STAGE_TWO) && !message.isLocal()){
+                    //广播收到的投票信息
+                    NetWorkCall.broadcast(chain.getChainId(), message, CommandConstant.MESSAGE_VOTE,false);
+                }
             } catch (Exception e) {
                 chain.getLogger().error(e);
             }

@@ -45,23 +45,23 @@ public class VoteManager {
     /**
      * 统计投票结果，接收到当前阶段投票信息时
      */
-    public static void statisticalResult(Chain chain, VoteMessage message, byte voteStage) throws Exception {
+    public static boolean statisticalResult(Chain chain, VoteMessage message, byte voteStage) throws Exception {
         //如果当前区块已经确认完成或则当前轮次确认完成则直接返回
         if (CURRENT_BLOCK_VOTE_DATA.isFinished() || CURRENT_BLOCK_VOTE_DATA.getCurrentRoundData().isFinished()) {
             chain.getLogger().warn("The current round of voting has been confirmed to be completed");
-            return;
+            return false;
         }
-        //如果不为当前轮次投票信息则直接返回
+        //如果不为当前轮次投票信息则直接 返回
         if (message.getRoundIndex() != CURRENT_BLOCK_VOTE_DATA.getRoundIndex() || message.getPackingIndexOfRound() != CURRENT_BLOCK_VOTE_DATA.getPackingIndexOfRound()
                 || message.getVoteStage() < CURRENT_BLOCK_VOTE_DATA.getVoteStage() || message.getHeight() != message.getHeight()) {
             chain.getLogger().error("Voting information error");
-            return;
+            return false;
         }
         //验证投票是否为共识节点投票
         MeetingRound meetingRound = roundManager.getRound(chain, CURRENT_BLOCK_VOTE_DATA.getRoundIndex(), CURRENT_BLOCK_VOTE_DATA.getRoundStartTime());
         if (!meetingRound.getMemberAddressList().contains(message.getAddress(chain))) {
             chain.getLogger().error("Current voting is not consensus node voting");
-            return;
+            return false;
         }
         VoteStageData stageData = CURRENT_BLOCK_VOTE_DATA.getCurrentVoteRoundStageData(voteStage);
         //如果为第一阶段投票，不需要保存签名数据
@@ -100,7 +100,7 @@ public class VoteManager {
         }
         //如果收集到的签名数量小于最小拜占庭验证数则直接返回
         if (voteTotalCount < CURRENT_BLOCK_VOTE_DATA.getMinByzantineCount()) {
-            return;
+            return true;
         }
         VoteResultData voteResultData = null;
         if (maxRateCount >= CURRENT_BLOCK_VOTE_DATA.getMinPassCount()) {
@@ -119,6 +119,7 @@ public class VoteManager {
         if (voteResultData != null) {
             handleVoteResult(chain, CURRENT_BLOCK_VOTE_DATA.getRoundIndex(), CURRENT_BLOCK_VOTE_DATA.getPackingIndexOfRound(), CURRENT_BLOCK_VOTE_DATA.getVoteRound(), voteStage, voteResultData);
         }
+        return true;
     }
 
     /**
@@ -533,4 +534,5 @@ public class VoteManager {
         NulsHash secondHash = bifurcate ? voteResultItem.getSecondHeader().getHash() : null;
         CallMethodUtils.noticeByzantineResult(chain, voteResultItem.getHeight(), bifurcate, firstHash, secondHash);
     }
+
 }

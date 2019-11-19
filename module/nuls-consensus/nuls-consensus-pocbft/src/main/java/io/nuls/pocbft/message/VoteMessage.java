@@ -85,7 +85,14 @@ public class VoteMessage extends BaseBusinessMessage {
      * */
     private NulsHash voteHash;
 
-    public VoteMessage(){}
+    /**
+     * 是否为自己投的票
+     * */
+    private boolean local;
+
+    public VoteMessage(){
+        this.local = false;
+    }
 
     public VoteMessage(VoteData voteData){
         this.height = voteData.getHeight();
@@ -97,6 +104,7 @@ public class VoteMessage extends BaseBusinessMessage {
         this.blockHash = voteData.getBlockHash();
         this.firstHeader = voteData.getFirstHeader();
         this.secondHeader = voteData.getSecondHeader();
+        this.local = false;
     }
 
     @Override
@@ -254,6 +262,14 @@ public class VoteMessage extends BaseBusinessMessage {
 
     public void setRoundStartTime(long roundStartTime) {
         this.roundStartTime = roundStartTime;
+    }
+
+    public boolean isLocal() {
+        return local;
+    }
+
+    public void setLocal(boolean local) {
+        this.local = local;
     }
 
     public NulsHash getVoteHash()throws IOException{

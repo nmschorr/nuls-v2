@@ -42,7 +42,7 @@ public class Chain {
      * 共识网络是否组好
      * 链接当前共识网络中80%的节点表示共识网络已组好
      * */
-    private boolean network;
+    private boolean networkState;
 
     /**
      * 链基础配置信息
@@ -161,7 +161,7 @@ public class Chain {
         this.appendDepositList = new ArrayList<>();
         this.reduceDepositList = new ArrayList<>();
         this.threadPool =  ThreadUtils.createThreadPool(4, 100, new NulsThreadFactory("consensus"+ getChainId()));
-        this.network = false;
+        this.networkState = false;
     }
 
 
@@ -319,6 +319,14 @@ public class Chain {
 
     public void setReduceDepositList(List<ChangeAgentDepositPo> reduceDepositList) {
         this.reduceDepositList = reduceDepositList;
+    }
+
+    public boolean isNetworkState() {
+        return networkState;
+    }
+
+    public void setNetworkState(boolean networkState) {
+        this.networkState = networkState;
     }
 
     public int getConsensusAgentCountMax(){

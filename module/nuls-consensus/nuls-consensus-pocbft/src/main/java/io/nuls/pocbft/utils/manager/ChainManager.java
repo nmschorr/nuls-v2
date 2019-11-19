@@ -238,6 +238,14 @@ public class ChainManager {
         }
     }
 
+    public void netWorkStateChange(Chain chain, boolean state){
+        //修改共识状态
+        chain.setNetworkState(state);
+
+        //初始化共识轮次和投票轮次
+
+    }
+
     public Map<Integer, Chain> getChainMap() {
         return chainMap;
     }

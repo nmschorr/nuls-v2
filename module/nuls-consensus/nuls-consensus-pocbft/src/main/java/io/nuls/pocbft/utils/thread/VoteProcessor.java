@@ -40,7 +40,8 @@ public class VoteProcessor implements Runnable {
     public void run() {
         while(true){
             try {
-                if (!chain.isPacker()) {
+                //如果不是共识节点或则共识网络未组好则直接返回
+                if (!chain.isPacker() || !chain.isNetworkState()) {
                     Thread.sleep(1000L);
                     continue;
                 }
@@ -106,13 +107,13 @@ public class VoteProcessor implements Runnable {
             //如果本轮次投票已完成，则直接进入第二轮投票
             String packAddress = AddressTool.getStringAddressByBytes(member.getAgent().getPackingAddress());
             if(VoteCache.CURRENT_BLOCK_VOTE_DATA.getCurrentRoundData().isFinished()){
-                stageTwoVote(chain, null, packAddress, currentRoundIndex, packIndex);
+                stageTwoVote(chain, null, packAddress);
                 continue;
             }
             //第一阶段投票及结果收集
             VoteResultData stageOneResult = stageOneVote(chain, packing, packEndTime, packAddress);
             //第二阶段投票及结果收集
-            stageTwoVote(chain, stageOneResult, packAddress, currentRoundIndex, packIndex);
+            stageTwoVote(chain, stageOneResult, packAddress);
         }
     }
 
@@ -162,11 +163,11 @@ public class VoteProcessor implements Runnable {
                     chain.getLogger().error(e);
                 }
             }
-            //第一阶段投票，如果还没收到区块HASH则投空块，如果收到分叉块则投分叉，否则投正常区块
-            VoteMessage stageOneVote = new VoteMessage(VoteCache.CURRENT_BLOCK_VOTE_DATA);
-            stageOneVote.setVoteStage(ConsensusConstant.VOTE_STAGE_ONE);
-            voteAndBroad(chain, packAddress, stageOneVote);
         }
+        //第一阶段投票，如果还没收到区块HASH则投空块，如果收到分叉块则投分叉，否则投正常区块
+        VoteMessage stageOneVote = new VoteMessage(VoteCache.CURRENT_BLOCK_VOTE_DATA);
+        stageOneVote.setVoteStage(ConsensusConstant.VOTE_STAGE_ONE);
+        voteAndBroad(chain, packAddress, stageOneVote, ConsensusConstant.VOTE_STAGE_ONE);
         VoteResultData stageOneResult;
         try {
             long voteStageTwoEndTime = packEndTime * 1000 + ConsensusConstant.VOTE_STAGE_TOW_WAIT_TIME - NulsDateUtils.getCurrentTimeMillis();
@@ -185,7 +186,7 @@ public class VoteProcessor implements Runnable {
      * 第二阶段投票
      *
      * */
-    private void stageTwoVote(Chain chain,VoteResultData stageOneResult, String packAddress, long currentRoundIndex, int packIndex){
+    private void stageTwoVote(Chain chain,VoteResultData stageOneResult, String packAddress){
         //如果本轮次投票以结束则直接处理投票结果
         if(!VoteCache.CURRENT_BLOCK_VOTE_DATA.getCurrentRoundData().isFinished()){
             VoteCache.CURRENT_BLOCK_VOTE_DATA.setVoteStage(ConsensusConstant.VOTE_STAGE_TWO);
@@ -201,7 +202,7 @@ public class VoteProcessor implements Runnable {
                     stageTwoVote.setSecondHeader(voteResultItem.getSecondHeader());
                 }
             }
-            voteAndBroad(chain, packAddress, stageTwoVote);
+            voteAndBroad(chain, packAddress, stageTwoVote, ConsensusConstant.VOTE_STAGE_TWO);
         }
         try {
             //需一直等待第二阶段有结果返回
@@ -229,7 +230,7 @@ public class VoteProcessor implements Runnable {
      * @param address   签名账户地址
      * @param message   投票消息
      * */
-    private void voteAndBroad(Chain chain, String address, VoteMessage message) {
+    private void voteAndBroad(Chain chain, String address, VoteMessage message, byte stage) {
         //签名
         byte[] sign = new byte[0];
         try {
@@ -240,6 +241,15 @@ public class VoteProcessor implements Runnable {
             LoggerUtil.commonLog.error(e);
         }
         message.setSign(sign);
+        message.setLocal(true);
+        VoteCache.CURRENT_BLOCK_VOTE_DATA.isRepeatMessage(message.getVoteRound(), message.getVoteStage(), message.getAddress(chain));
+        if(stage == ConsensusConstant.VOTE_STAGE_ONE){
+            VoteCache.CURRENT_ROUND_STAGE_ONE_MESSAGE_QUEUE.offer(message);
+            VoteCache.CURRENT_BLOCK_VOTE_DATA.getCurrentRoundData().getStageOne().getHaveVotedAccountSet().add(address);
+        }else{
+            VoteCache.CURRENT_ROUND_STAGE_TOW_MESSAGE_QUEUE.offer(message);
+            VoteCache.CURRENT_BLOCK_VOTE_DATA.getCurrentRoundData().getStageTwo().getHaveVotedAccountSet().add(address);
+        }
         NetWorkCall.broadcast(chain.getChainId(), message, CommandConstant.MESSAGE_VOTE,false);
     }
 }

@@ -1,12 +1,11 @@
 package io.nuls.pocbft.model.bo.vote;
 import io.nuls.base.data.NulsHash;
 import io.nuls.pocbft.message.VoteMessage;
-import io.nuls.pocbft.model.bo.vote.VoteResultData;
-import io.nuls.pocbft.model.bo.vote.VoteResultItem;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 public class VoteStageData {
     /**
@@ -38,7 +37,7 @@ public class VoteStageData {
 
 
     public VoteStageData(){
-        this.haveVotedAccountSet = new HashSet<>();
+        this.haveVotedAccountSet = new CopyOnWriteArraySet<>();
         this.itemMap = new HashMap<>();
         this.voteMessageMap = new ConcurrentHashMap<>();
         this.itemVoteCountMap = new HashMap<>();
