@@ -1,21 +1,31 @@
 package io.nuls.pocbft.utils.manager;
 
+import io.nuls.base.basic.AddressTool;
 import io.nuls.base.protocol.ProtocolGroupManager;
 import io.nuls.base.protocol.ProtocolLoader;
 import io.nuls.base.protocol.RegisterHelper;
 import io.nuls.core.core.annotation.Autowired;
 import io.nuls.core.core.annotation.Component;
+import io.nuls.core.exception.NulsException;
 import io.nuls.core.log.Log;
 import io.nuls.core.rockdb.constant.DBErrorCode;
 import io.nuls.core.rockdb.service.RocksDBService;
+import io.nuls.core.rpc.util.NulsDateUtils;
 import io.nuls.economic.base.service.EconomicService;
 import io.nuls.economic.nuls.constant.ParamConstant;
 import io.nuls.economic.nuls.model.bo.ConsensusConfigInfo;
+import io.nuls.pocbft.cache.VoteCache;
+import io.nuls.pocbft.constant.CommandConstant;
+import io.nuls.pocbft.message.VoteMessage;
 import io.nuls.pocbft.model.bo.config.ChainConfig;
 import io.nuls.pocbft.model.bo.config.ConsensusChainConfig;
 import io.nuls.pocbft.constant.ConsensusConstant;
 import io.nuls.pocbft.model.bo.Chain;
+import io.nuls.pocbft.model.bo.round.MeetingMember;
+import io.nuls.pocbft.model.bo.round.MeetingRound;
+import io.nuls.pocbft.model.bo.vote.VoteData;
 import io.nuls.pocbft.rpc.call.CallMethodUtils;
+import io.nuls.pocbft.rpc.call.NetWorkCall;
 import io.nuls.pocbft.storage.ConfigService;
 import io.nuls.pocbft.utils.LoggerUtil;
 
@@ -238,12 +248,56 @@ public class ChainManager {
         }
     }
 
+    /**
+     * 修改节点共识网络状态
+     * @param chain  链信息
+     * @param state  共识网络状态
+     * */
     public void netWorkStateChange(Chain chain, boolean state){
         //修改共识状态
         chain.setNetworkState(state);
+        if(!state){
+            chain.getLogger().warn("Consensus network reset");
+            return;
+        }
+        //链刚启动初始化共识轮次和投票轮次
+        if(chain.getNewestHeader().getHeight() == 0){
+            try {
+                MeetingRound round = roundManager.getRound(chain, ConsensusConstant.INIT_ROUND_INDEX, NulsDateUtils.getCurrentTimeSeconds());
+                MeetingMember member = round.getMyMember();
+                if(member != null && member.getPackingIndexOfRound() == 1){
+                    roundManager.addRound(chain, round);
+                    VoteCache.CURRENT_BLOCK_VOTE_DATA = new VoteData(round.getIndex(), member.getPackingIndexOfRound(), round.getMemberCount(), chain.getNewestHeader().getHeight() + 1, round.getStartTime());;
+                }
+            }catch (NulsException e){
+                chain.getLogger().error(e);
+            }
+        }
+    }
 
-        //初始化共识轮次和投票轮次
-
+    /**
+     * 共识网络节点链接上本节点
+     * @param chain    链信息
+     * @param nodeId   链接节点信息
+     * */
+    public void consensusNodeLink(Chain chain, String nodeId){
+        //如果本节点为正常的共识节点，将本节点最后一次的投票结果广播给该节点（有可能这个节点为刚启动的节点，需要收到投票信息初始化轮次）
+        if(VoteCache.CURRENT_BLOCK_VOTE_DATA != null){
+            MeetingRound round = roundManager.getRoundByIndex(chain, VoteCache.CURRENT_BLOCK_VOTE_DATA.getRoundIndex());
+            if(round == null){
+                chain.getLogger().warn("Local round not initialized, data exception");
+                return;
+            }
+            MeetingMember member = round.getMyMember();
+            if(member == null){
+                chain.getLogger().warn("The current node is not a consensus node, and the consensus network networking is abnormal");
+                return;
+            }
+            VoteMessage message = VoteCache.CURRENT_BLOCK_VOTE_DATA.getStageVoteMessage(VoteCache.CURRENT_BLOCK_VOTE_DATA.getVoteStage()).get(AddressTool.getStringAddressByBytes(member.getAgent().getPackingAddress()));
+            if(message != null){
+                NetWorkCall.sendToNode(chain.getChainId(), message, nodeId, CommandConstant.MESSAGE_VOTE);
+            }
+        }
     }
 
     public Map<Integer, Chain> getChainMap() {

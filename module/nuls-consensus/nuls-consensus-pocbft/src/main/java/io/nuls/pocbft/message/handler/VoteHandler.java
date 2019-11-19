@@ -6,10 +6,14 @@ import io.nuls.base.signture.BlockSignature;
 import io.nuls.core.core.annotation.Autowired;
 import io.nuls.core.core.annotation.Component;
 import io.nuls.core.exception.NulsException;
+import io.nuls.core.rpc.util.NulsDateUtils;
 import io.nuls.pocbft.cache.VoteCache;
 import io.nuls.pocbft.constant.CommandConstant;
+import io.nuls.pocbft.constant.ConsensusConstant;
 import io.nuls.pocbft.message.VoteMessage;
 import io.nuls.pocbft.model.bo.Chain;
+import io.nuls.pocbft.model.bo.round.MeetingRound;
+import io.nuls.pocbft.model.bo.vote.VoteData;
 import io.nuls.pocbft.utils.LoggerUtil;
 import io.nuls.pocbft.utils.enumeration.VoteTime;
 import io.nuls.pocbft.utils.manager.ChainManager;
@@ -46,6 +50,17 @@ public class VoteHandler implements MessageProcessor {
         VoteMessage message = RPCUtil.getInstanceRpcStr(msg, VoteMessage.class);
         if (message == null) {
             return;
+        }
+
+        //如果当前投票轮次未空则表示当前节点刚启动需要根据其他节点的投票信息来初始化投票轮次
+        if(VoteCache.CURRENT_BLOCK_VOTE_DATA == null){
+            try {
+                MeetingRound round = roundManager.getRound(chain, message.getRoundIndex(), message.getRoundStartTime());
+                VoteCache.CURRENT_BLOCK_VOTE_DATA = new VoteData(message.getRoundIndex(), message.getPackingIndexOfRound(), round.getMemberCount(), message.getHeight(), message.getRoundStartTime());
+            }catch (Exception e){
+                chain.getLogger().error(e);
+                return;
+            }
         }
 
         VoteTime voteTime = VoteCache.CURRENT_BLOCK_VOTE_DATA.voteTime(message);

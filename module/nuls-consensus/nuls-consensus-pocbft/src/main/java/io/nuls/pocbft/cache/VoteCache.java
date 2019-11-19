@@ -14,7 +14,7 @@ public class VoteCache {
     /**
      * 当前确认区块投票信息
      * */
-    public static VoteData CURRENT_BLOCK_VOTE_DATA;
+    public static VoteData CURRENT_BLOCK_VOTE_DATA = null;
 
     /**
      * 上一轮投票是否确认完成，用于控制投票线程的执行

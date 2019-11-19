@@ -166,4 +166,7 @@ public interface ConsensusConstant {
     byte CURRENT_ROUND = 1;
     byte CURRENT_BLOCK = 2;
     byte FUTURE = 3;
+
+
+    long INIT_ROUND_INDEX = 2;
  }

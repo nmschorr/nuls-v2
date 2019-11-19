@@ -26,6 +26,7 @@
 package io.nuls.pocbft.model.bo.round;
 import io.nuls.core.rpc.model.ApiModel;
 import io.nuls.core.rpc.model.ApiModelProperty;
+import io.nuls.pocbft.constant.ConsensusConstant;
 import io.nuls.pocbft.model.bo.tx.txdata.Agent;
 import io.nuls.core.crypto.Sha256Hash;
 import io.nuls.core.model.ByteUtils;
@@ -77,6 +78,9 @@ public class MeetingMember implements Comparable<MeetingMember> {
     public String getSortValue() {
         if (this.sortValue == null) {
             byte[] hash = ByteUtils.concatenate(agent.getPackingAddress(), SerializeUtils.uint64ToByteArray(roundStartTime));
+            if(roundIndex == ConsensusConstant.INIT_ROUND_INDEX){
+                hash = agent.getPackingAddress();
+            }
             sortValue = Sha256Hash.twiceOf(hash).toString();
         }
         return sortValue;
