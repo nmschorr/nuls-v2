@@ -70,7 +70,7 @@ public class TxPackageServiceImpl implements TxPackageService {
      * @return
      */
     @Override
-    public TxPackage packageBasic(Chain chain, long endtimestamp, long maxTxDataSize) {
+    public List<String> packageBasic(Chain chain, long endtimestamp, long maxTxDataSize) {
         chain.getPackageLock().lock();
         long startTime = NulsDateUtils.getCurrentTimeMillis();
         long packableTime = endtimestamp - startTime;
@@ -82,17 +82,17 @@ public class TxPackageServiceImpl implements TxPackageService {
         Map<String, List<String>> moduleVerifyMap = new HashMap<>(TxConstant.INIT_CAPACITY_8);
         NulsLogger log = chain.getLogger();
         try {
-            log.info("[Package start] -可打包时间：{}, -可打包容量：{}B , - height:{}, - 当前待打包队列交易hash数:{}, - 待打包队列实际交易数:{}",
+            log.info("[Package start] -打包总可用时间：{}, -可打包容量：{}B , - height:{}, - 当前待打包队列交易hash数:{}, - 待打包队列实际交易数:{}",
                     packableTime, maxTxDataSize, height, packablePool.packableHashQueueSize(chain), packablePool.packableTxMapSize(chain));
             if (packableTime <= TxConstant.BASIC_PACKAGE_RESERVE_TIME) {
                 //直接打空块
-                return emptyBlock(height);
+                return null;
             }
             long collectTime = 0L, batchModuleTime = 0L;
             long collectTimeStart = NulsDateUtils.getCurrentTimeMillis();
             boolean rs = collectProcessTransactionsBasic(chain, endtimestamp, maxTxDataSize, packingTxList, orphanTxSet, moduleVerifyMap);
             if(!rs){
-                return emptyBlock(height);
+                return null;
             }
             if(log.isDebugEnabled()) {
                 collectTime = NulsDateUtils.getCurrentTimeMillis() - collectTimeStart;
@@ -104,7 +104,6 @@ public class TxPackageServiceImpl implements TxPackageService {
             if(log.isDebugEnabled()) {
                 batchModuleTime = NulsDateUtils.getCurrentTimeMillis() - batchStart;
             }
-
             List<String> packableTxs = new ArrayList<>();
             Iterator<TxPackageWrapper> iterator = packingTxList.iterator();
             Map<NulsHash, Integer> txPackageOrphanMap = chain.getTxPackageOrphanMap();
@@ -127,7 +126,7 @@ public class TxPackageServiceImpl implements TxPackageService {
             txService.putBackPackablePool(chain, orphanTxSet);
             if (chain.getProtocolUpgrade().get()) {
                 processProtocolUpgrade(chain, packingTxList);
-                return emptyBlock(height);
+                return null;
             }
 
             long current = NulsDateUtils.getCurrentTimeMillis();
@@ -139,18 +138,17 @@ public class TxPackageServiceImpl implements TxPackageService {
             }
             long totalTime = NulsDateUtils.getCurrentTimeMillis() - startTime;
             log.debug("[打包时间统计] 总可用:{}ms, 总执行:{}, 收集交易与账本验证:{}, 模块统一验证:{}",
-                    endtimestamp, totalTime, collectTime, batchModuleTime);
+                    packableTime, totalTime, collectTime, batchModuleTime);
 
             log.info("[Package end] - height:{} - 本次打包交易数:{} - 当前待打包队列交易hash数:{}, - 待打包队列实际交易数:{}" + TxUtil.nextLine(),
                     height, packableTxs.size(), packablePool.packableHashQueueSize(chain), packablePool.packableTxMapSize(chain));
 
-            TxPackage txPackage = new TxPackage();
-            txPackage.setList(packableTxs);
-            txPackage.setPackageHeight(height);
-            return txPackage;
+            return packableTxs;
         } catch (Exception e) {
             log.error(e);
-            return emptyBlock(height);
+            //可打包交易,孤儿交易,全加回去
+            txService.putBackPackablePool(chain, packingTxList, orphanTxSet);
+            return null;
         } finally {
             chain.getPackageLock().unlock();
         }
@@ -176,6 +174,7 @@ public class TxPackageServiceImpl implements TxPackageService {
         for (int index = 0; ; index++) {
             long currentTimeMillis = NulsDateUtils.getCurrentTimeMillis();
             long currentReserve = endtimestamp - currentTimeMillis;
+            log.debug("remaining:{}",currentReserve);
             if (currentReserve <= TxConstant.BASIC_PACKAGE_RESERVE_TIME) {
                 if(log.isDebugEnabled()) {
                     log.debug("获取交易时间到,进入模块验证阶段: currentTimeMillis:{}, -endtimestamp:{}, -offset:{}, -remaining:{}",
@@ -387,9 +386,6 @@ public class TxPackageServiceImpl implements TxPackageService {
      * @param height
      * @return
      */
-    public TxPackage emptyBlock(long height){
-        return new TxPackage(new ArrayList<>(), null, height);
-    }
     public TxPackage emptyBlock(String preStateRoot, long height){
         return new TxPackage(new ArrayList<>(), preStateRoot, height);
     }

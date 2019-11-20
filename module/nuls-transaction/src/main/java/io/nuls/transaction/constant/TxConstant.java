@@ -82,6 +82,6 @@ public interface TxConstant {
     long BASIC_PACKAGE_RESERVE_TIME = 300L;
     /** 一个区块中最大允许跨链模块交易的数量*/
     int BASIC_PACKAGE_CROSS_TX_MAX_COUNT = 50;
-    int BASIC_PACKAGE_VERIFY_COINDATA_BATCH = 1000;
-    long PACKAGE_RPC_RESERVE_TIME = 30L;
+    int BASIC_PACKAGE_VERIFY_COINDATA_BATCH = 2000;
+    long PACKAGE_RPC_RESERVE_TIME = 20L;
 }

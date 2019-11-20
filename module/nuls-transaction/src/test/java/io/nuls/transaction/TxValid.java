@@ -324,27 +324,27 @@ public class TxValid {
     @Test
     public void multiThreadingTransfer() throws Exception {
         /** 每个线程发起交易的数量 */
-        int txCount = 7500;
+        int txCount = 1000;
         long startTime = System.currentTimeMillis();
-        Transfer transfer1 = new Transfer(address25, address21, txCount);
+        Transfer transfer1 = new Transfer(address21, address22, txCount);
         Thread thread1 = new Thread(transfer1);
         thread1.start();
 
-        Transfer transfer2 = new Transfer(address26, address22, txCount);
-        Thread thread2 = new Thread(transfer2);
-        thread2.start();
-
-        Transfer transfer3 = new Transfer(address27, address23, txCount);
-        Thread thread3 = new Thread(transfer3);
-        thread3.start();
-
-        Transfer transfer4 = new Transfer(address28, address24, txCount);
-        Thread thread4 = new Thread(transfer4);
-        thread4.start();
-
-        Transfer transfer5 = new Transfer(address29, address24, txCount);
-        Thread thread5 = new Thread(transfer5);
-        thread5.start();
+//        Transfer transfer2 = new Transfer(address26, address22, txCount);
+//        Thread thread2 = new Thread(transfer2);
+//        thread2.start();
+//
+//        Transfer transfer3 = new Transfer(address27, address23, txCount);
+//        Thread thread3 = new Thread(transfer3);
+//        thread3.start();
+//
+//        Transfer transfer4 = new Transfer(address28, address24, txCount);
+//        Thread thread4 = new Thread(transfer4);
+//        thread4.start();
+//
+//        Transfer transfer5 = new Transfer(address29, address24, txCount);
+//        Thread thread5 = new Thread(transfer5);
+//        thread5.start();
 
 //        Transfer transfer6 = new Transfer(address20, address24, txCount);
 //        Thread thread6 = new Thread(transfer6);
@@ -352,10 +352,10 @@ public class TxValid {
 //        Log.info("{}线程执行中...", thread6.getName());
 
         thread1.join();
-        thread2.join();
-        thread3.join();
-        thread4.join();
-        thread5.join();
+//        thread2.join();
+//        thread3.join();
+//        thread4.join();
+//        thread5.join();
 //        thread6.join();
         long endTime = System.currentTimeMillis();
         long executionTime = endTime - startTime;
@@ -434,7 +434,7 @@ public class TxValid {
     @Test
     public void getBalance() throws Exception {
 
-        BigInteger balance = LedgerCall.getBalance(chain, AddressTool.getAddress("tNULSeBaNDW6r3RCaxLtBzo4QLPKPdWmDWgxAs"), assetChainId, assetId);
+        BigInteger balance = LedgerCall.getBalance(chain, AddressTool.getAddress(address21), assetChainId, assetId);
         System.out.println(JSONUtils.obj2PrettyJson(balance));
 
     }
@@ -1077,7 +1077,7 @@ public class TxValid {
     /**
      * 组装交易
      */
-    public Transaction assemblyTransaction(int chainId, List<CoinDTO> fromList, List<CoinDTO> toList, String remark, NulsHash hash) throws NulsException {
+    public static Transaction assemblyTransaction(int chainId, List<CoinDTO> fromList, List<CoinDTO> toList, String remark, NulsHash hash) throws NulsException {
         Transaction tx = new Transaction(2);
         tx.setTime(NulsDateUtils.getCurrentTimeMillis() / 1000);
         tx.setRemark(StringUtils.bytes(remark));
@@ -1118,7 +1118,7 @@ public class TxValid {
         return tx;
     }
 
-    private Transaction assemblyCoinData(Transaction tx, int chainId, List<CoinDTO> fromList, List<CoinDTO> toList, NulsHash hash) throws NulsException {
+    private static Transaction assemblyCoinData(Transaction tx, int chainId, List<CoinDTO> fromList, List<CoinDTO> toList, NulsHash hash) throws NulsException {
         try {
             //组装coinFrom、coinTo数据
             List<CoinFrom> coinFromList = assemblyCoinFrom(chainId, fromList, hash);
@@ -1137,7 +1137,7 @@ public class TxValid {
         return tx;
     }
 
-    private CoinData getCoinData(int chainId, List<CoinFrom> listFrom, List<CoinTo> listTo, int txSize) throws NulsException {
+    private static CoinData getCoinData(int chainId, List<CoinFrom> listFrom, List<CoinTo> listTo, int txSize) throws NulsException {
         CoinData coinData = new CoinData();
         coinData.setFrom(listFrom);
         coinData.setTo(listTo);
@@ -1151,7 +1151,7 @@ public class TxValid {
      * @param coinFroms
      * @return
      */
-    private int getSignatureSize(List<CoinFrom> coinFroms) {
+    private static int getSignatureSize(List<CoinFrom> coinFroms) {
         int size = 0;
         Set<String> commonAddress = new HashSet<>();
         for (CoinFrom coinFrom : coinFroms) {
@@ -1170,7 +1170,7 @@ public class TxValid {
      * @return List<CoinFrom>
      * @throws NulsException
      */
-    private List<CoinFrom> assemblyCoinFrom(int chainId, List<CoinDTO> listFrom, NulsHash hash) throws NulsException {
+    private static List<CoinFrom> assemblyCoinFrom(int chainId, List<CoinDTO> listFrom, NulsHash hash) throws NulsException {
         List<CoinFrom> coinFroms = new ArrayList<>();
         for (CoinDTO coinDto : listFrom) {
             String address = coinDto.getAddress();
@@ -1189,7 +1189,7 @@ public class TxValid {
         return coinFroms;
     }
 
-    private Chain createChain() {
+    private static Chain createChain() {
         Chain chain = new Chain();
         ConfigBean configBean = new ConfigBean();
         configBean.setChainId(chainId);
@@ -1220,7 +1220,7 @@ public class TxValid {
      * @return List<CoinTo>
      * @throws NulsException
      */
-    private List<CoinTo> assemblyCoinTo(int chainId, List<CoinDTO> listTo) throws NulsException {
+    private static List<CoinTo> assemblyCoinTo(int chainId, List<CoinDTO> listTo) throws NulsException {
         List<CoinTo> coinTos = new ArrayList<>();
         for (CoinDTO coinDto : listTo) {
             String address = coinDto.getAddress();
@@ -1252,7 +1252,7 @@ public class TxValid {
      *
      * @return
      */
-    public Map createTransferTx(String addressFrom, String addressTo, BigInteger amount) {
+    public static Map createTransferTx(String addressFrom, String addressTo, BigInteger amount) {
         Map transferMap = new HashMap();
         transferMap.put("chainId", chainId);
         transferMap.put("remark", "abc");

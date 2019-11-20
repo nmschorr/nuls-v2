@@ -25,7 +25,8 @@
 package io.nuls.transaction.service;
 
 import io.nuls.transaction.model.bo.Chain;
-import io.nuls.transaction.model.bo.TxPackage;
+
+import java.util.List;
 
 /**
  * 处理节点打包区块时的交易
@@ -42,5 +43,5 @@ public interface TxPackageService {
      * @param maxTxDataSize
      * @return
      */
-    TxPackage packageBasic (Chain chain, long endtimestamp, long maxTxDataSize);
+    List<String> packageBasic (Chain chain, long endtimestamp, long maxTxDataSize);
 }
