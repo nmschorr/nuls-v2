@@ -136,6 +136,7 @@ public class ConsensusIdentityProcessor implements MessageProcessor {
                 List<String> ips = new ArrayList<>();
                 ips.add(consensusNet.getNodeId().split(":")[0]);
                 networkService.addIps(chainId,"POC",ips);
+                chainManager.consensusNodeLink(chain,consensusNet.getNodeId());
             }
             //更新共识连接组,并且返回之前未连接
             if (!consensusNetService.updateConsensusNode(chainId, consensusNet, isConnect)) {

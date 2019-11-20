@@ -25,6 +25,7 @@
 package io.nuls.pocnetwork.model;
 
 import io.nuls.core.crypto.HexUtil;
+import io.nuls.pocbft.model.bo.Chain;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +42,7 @@ public class ConsensusNetGroup {
         this.chainId = chainId;
     }
 
+    boolean available = false;
     private int chainId;
     private Map<String, ConsensusNet> group = new ConcurrentHashMap<>();
 
@@ -64,6 +66,38 @@ public class ConsensusNetGroup {
         group.put(HexUtil.encode(consensusNet.getPubKey()), consensusNet);
     }
 
+    public boolean isAvailable() {
+        return available;
+    }
+
+    public void setAvailable(boolean available) {
+        this.available = available;
+    }
+
+    public boolean statusChange(int percent, Chain chain) {
+        int total = group.size();
+        int hadConnect = 0;
+        boolean netAvailable = false;
+        for (Map.Entry<String, ConsensusNet> entry : group.entrySet()) {
+            if (null != entry.getValue().getNodeId() && entry.getValue().isHadConnect()) {
+                hadConnect++;
+            }
+        }
+        if (total > 0) {
+            int connectPercent = (int) (hadConnect / total);
+            if (connectPercent >= percent) {
+                netAvailable = true;
+            }
+        }
+        if (netAvailable == available) {
+            chain.getLogger().info("net state not change total={} hadConnect={}", total, hadConnect);
+        } else {
+            chain.getLogger().info("net state  change total={} hadConnect={}", total, hadConnect);
+            available = netAvailable;
+        }
+        return true;
+    }
+
     public List<String> getConsensusNetIps() {
         List<String> ips = new ArrayList<>();
         for (Map.Entry<String, ConsensusNet> entry : group.entrySet()) {
@@ -80,11 +114,11 @@ public class ConsensusNetGroup {
 
     public String removeConsensus(byte[] consensusPubKey) {
         String key = HexUtil.encode(consensusPubKey);
-        ConsensusNet consensusNet= group.get(key);
-        if(null == consensusNet){
-          return null;
+        ConsensusNet consensusNet = group.get(key);
+        if (null == consensusNet) {
+            return null;
         }
         group.remove(key);
-       return consensusNet.getNodeId();
+        return consensusNet.getNodeId();
     }
 }

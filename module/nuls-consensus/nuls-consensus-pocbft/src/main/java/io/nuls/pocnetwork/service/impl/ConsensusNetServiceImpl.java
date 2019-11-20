@@ -59,6 +59,7 @@ import io.nuls.core.rpc.netty.processor.ResponseMessageProcessor;
 import io.nuls.pocbft.model.bo.Chain;
 import io.nuls.pocbft.utils.LoggerUtil;
 import io.nuls.pocbft.utils.manager.ChainManager;
+import io.nuls.pocbft.utils.manager.ThreadManager;
 import io.nuls.pocnetwork.constant.NetworkCmdConstant;
 import io.nuls.pocnetwork.model.ConsensusKeys;
 import io.nuls.pocnetwork.model.ConsensusNet;
@@ -84,8 +85,11 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     @Autowired
     private ChainManager chainManager;
     @Autowired
+    private ThreadManager threadManager;
+    @Autowired
     NetworkService networkService;
     static Map<Integer, ConsensusNetGroup> GROUPS_MAP = new ConcurrentHashMap<>();
+    static Map<Integer, Boolean> NETTHREAD_MAP = new ConcurrentHashMap<>();
     static Map<Integer, ConsensusKeys> CONSENSUSKEYS_MAP = new ConcurrentHashMap<>();
     static final short ADD_CONSENSUS = 1;
     static final short DEL_CONSENSUS = 2;
@@ -113,14 +117,33 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
         }
     }
 
+    @Override
+    public boolean netStatusChange(Chain chain) {
+        ConsensusNetGroup group = GROUPS_MAP.get(chain.getChainId());
+        if (null != group) {
+            return group.statusChange(67, chain);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean getNetStatus(Chain chain) {
+        ConsensusNetGroup group = GROUPS_MAP.get(chain.getChainId());
+        if (null != group) {
+            return group.isAvailable();
+        }
+        return false;
+    }
+
     /**
-     * @param consensusPubKey
-     * @param updateType      1 增加  2 删除
+     * @param consensusPubKeyStr
+     * @param updateType         1 增加  2 删除
      * @description 更新共识列表, 增加或者减少节点时候调用
      */
     @Override
-    public boolean updateConsensusList(int chainId, byte[] consensusPubKey, short updateType) {
+    public boolean updateConsensusList(int chainId, String consensusPubKeyStr, short updateType) {
         ConsensusNetGroup group = GROUPS_MAP.get(chainId);
+        byte[] consensusPubKey = HexUtil.decode(consensusPubKeyStr);
         if (ADD_CONSENSUS == updateType) {
             ConsensusNet consensusNet = new ConsensusNet(consensusPubKey, null);
             group.addConsensus(consensusNet);
@@ -139,15 +162,17 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
      * 启动或者自身跃迁为共识节点时候调用。
      *
      * @param chainId
-     * @param selfPubKey
-     * @param selfPrivKey
+     * @param selfPubKeyStr
+     * @param selfPrivKeyStr
      * @param consensusPubKeyList
      * @return
      */
     @Override
-    public boolean initConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusPubKeyList) {
+    public boolean initConsensusNetwork(int chainId, String selfPubKeyStr, String selfPrivKeyStr, List<String> consensusPubKeyList) {
         Chain chain = chainManager.getChainMap().get(chainId);
         ConsensusNetGroup group = new ConsensusNetGroup(chainId);
+        byte[] selfPubKey = HexUtil.decode(selfPubKeyStr);
+        byte[] selfPrivKey = HexUtil.decode(selfPrivKeyStr);
         ConsensusKeys consensusKeys = new ConsensusKeys(selfPubKey, selfPrivKey);
 
         String nodeId = networkService.getSelfNodeId(chainId);
@@ -158,12 +183,13 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
         selfConsensusNet.setNodeId(nodeId);
         ConsensusIdentitiesMsg consensusIdentitiesMsg = new ConsensusIdentitiesMsg(selfConsensusNet);
         consensusIdentitiesMsg.setBroadcast(true);
-        for (byte[] consensusPubKey : consensusPubKeyList) {
-            if (!ArraysTool.arrayEquals(consensusPubKey, selfPubKey)) {
-                ConsensusNet consensusNet = new ConsensusNet(consensusPubKey, null);
+        for (String consensusPubKey : consensusPubKeyList) {
+            byte[] pubKey = HexUtil.decode(consensusPubKey);
+            if (!ArraysTool.arrayEquals(pubKey, selfPubKey)) {
+                ConsensusNet consensusNet = new ConsensusNet(pubKey, null);
                 group.addConsensus(consensusNet);
                 try {
-                    consensusIdentitiesMsg.addEncryptNodes(consensusPubKey);
+                    consensusIdentitiesMsg.addEncryptNodes(pubKey);
                 } catch (Exception e) {
                     chain.getLogger().error(e);
                     return false;
@@ -179,6 +205,10 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
         } catch (IOException e) {
             chain.getLogger().error(e);
             return false;
+        }
+        if (null == NETTHREAD_MAP.get(chainId) || !NETTHREAD_MAP.get(chainId)) {
+            NETTHREAD_MAP.put(chainId, true);
+            threadManager.createChainThread(chain);
         }
         return true;
     }

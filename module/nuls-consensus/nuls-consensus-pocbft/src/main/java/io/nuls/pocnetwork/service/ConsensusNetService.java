@@ -24,6 +24,7 @@
  */
 package io.nuls.pocnetwork.service;
 
+import io.nuls.pocbft.model.bo.Chain;
 import io.nuls.pocnetwork.model.ConsensusKeys;
 import io.nuls.pocnetwork.model.ConsensusNet;
 
@@ -40,7 +41,7 @@ public interface ConsensusNetService {
      * @param updateType      1 增加  2 删除
      * @description 更新共识列表, 增加或者减少节点时候调用
      */
-    boolean updateConsensusList(int chainId, byte[] consensusPubKey, short updateType);
+    boolean updateConsensusList(int chainId, String consensusPubKey, short updateType);
 
     /**
      * @param chainId
@@ -49,7 +50,7 @@ public interface ConsensusNetService {
      * @param consensusPubKeyList
      * @return
      */
-    boolean initConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusPubKeyList);
+    boolean initConsensusNetwork(int chainId, String selfPubKey, String selfPrivKey, List<String> consensusPubKeyList);
 
     /**
      * 广播共识消息
@@ -73,4 +74,8 @@ public interface ConsensusNetService {
     boolean updateConsensusNode(int chainId, ConsensusNet consensusNet, boolean isConnect);
 
     void printTestInfo();
+
+    boolean netStatusChange(Chain chain);
+    boolean getNetStatus(Chain chain);
+
 }
