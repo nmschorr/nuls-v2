@@ -39,12 +39,12 @@ import java.util.Set;
 public interface ConsensusNetService {
     /**
      * @param consensusPubKeys
-     * @param  consensusAddrs,
-     * @param updateType      1 增加  2 删除
-     * @description 更新共识列表, 增加或者减少节点时候调用. 只知道地址时候就只给地址
+     * @param consensusAddrs,
+     * @param updateType       1 增加  2 删除
      * @return
+     * @description 更新共识列表, 增加或者减少节点时候调用. 只知道地址时候就只给地址
      */
-    boolean updateConsensusList(int chainId, List<byte[]> consensusPubKeys, List<String> consensusAddrs,short updateType);
+    boolean updateConsensusList(int chainId, List<byte[]> consensusPubKeys, List<String> consensusAddrs, short updateType);
 
     /**
      * @param chainId
@@ -52,13 +52,12 @@ public interface ConsensusNetService {
      * @param selfPrivKey
      * @param consensusPubKeyList
      * @param consensusAddrList
-     * @description 在成为共识节点时候调用，有公钥的，不用在地址列表里。如果只有共识节点地址的，可以给地址列表consensusAddrList
      * @return
+     * @description 在成为共识节点时候调用，有公钥的，不用在地址列表里。如果只有共识节点地址的，可以给地址列表consensusAddrList
      */
     boolean initConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusPubKeyList, Set<String> consensusAddrList);
 
     /**
-     *
      * @param chainId
      * @param selfPubKey
      * @param selfPrivKey
@@ -66,7 +65,14 @@ public interface ConsensusNetService {
      * @return
      * @description 自身从共识节点变为普通节点时候调用
      */
-    boolean createConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusSeedPubKeyList);
+    boolean createConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusSeedPubKeyList, Set<String> consensusAddrList);
+
+    /**
+     * @param chainId
+     * @param consensusAddrList
+     * @return
+     */
+    boolean updateConsensusList(int chainId, Set<String> consensusAddrList);
 
     /**
      * @param chainId

@@ -263,8 +263,13 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     }
 
     @Override
-    public boolean createConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusSeedPubKeyList) {
-        return true;
+    public boolean createConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusSeedPubKeyList, Set<String> consensusAddrList) {
+        return false;
+    }
+
+    @Override
+    public boolean updateConsensusList(int chainId, Set<String> consensusAddrList) {
+        return false;
     }
 
     @Override
