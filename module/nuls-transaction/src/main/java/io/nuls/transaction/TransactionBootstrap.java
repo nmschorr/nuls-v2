@@ -44,7 +44,6 @@ import io.nuls.transaction.constant.TxConstant;
 import io.nuls.transaction.constant.TxDBConstant;
 import io.nuls.transaction.manager.ChainManager;
 import io.nuls.transaction.model.bo.Chain;
-import io.nuls.transaction.utils.DBUtil;
 
 import java.util.Set;
 
@@ -175,8 +174,7 @@ public class TransactionBootstrap extends RpcModule {
         try {
             //数据文件存储地址
             RocksDBService.init(txConfig.getTxDataRoot());
-            //模块配置表
-            DBUtil.createTable(TxDBConstant.DB_MODULE_CONGIF);
+            RocksDBService.createTable(TxDBConstant.DB_MODULE_CONGIF);
         } catch (Exception e) {
             LOG.error(e);
         }

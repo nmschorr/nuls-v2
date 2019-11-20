@@ -75,7 +75,13 @@ public interface TxConstant {
      该配置为固定给第二部分预留的时间，其他时间留给第一部分。
      */
     long PACKAGE_MODULE_VALIDATOR_RESERVE_TIME = 2000L;//1500L;
-
-
     long TIMEOUT = 600 * 1000L;
+
+    /** 闪电网络基础打包参数配置 不包含智能合约**/
+    int BASIC_PACKAGE_TX_MAX_COUNT = 1000;
+    long BASIC_PACKAGE_RESERVE_TIME = 300L;
+    /** 一个区块中最大允许跨链模块交易的数量*/
+    int BASIC_PACKAGE_CROSS_TX_MAX_COUNT = 50;
+    int BASIC_PACKAGE_VERIFY_COINDATA_BATCH = 1000;
+    long PACKAGE_RPC_RESERVE_TIME = 30L;
 }
