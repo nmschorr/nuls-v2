@@ -153,10 +153,15 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     @Override
     public boolean updateConsensusList(int chainId, List<byte[]> consensusPubKeys, List<String> consensusAddrs, short updateType) {
         ConsensusNetGroup group = GROUPS_MAP.get(chainId);
+        ConsensusKeys consensusKeys =  CONSENSUSKEYS_MAP.get(chainId);
+        String selfAddr = AddressTool.getStringAddressByBytes(AddressTool.getAddress(consensusKeys.getPubKey(), chainId));
         if (ADD_CONSENSUS == updateType) {
             if (null != consensusPubKeys) {
                 for (byte[] consensusPubKey : consensusPubKeys) {
                     String address = AddressTool.getStringAddressByBytes(AddressTool.getAddress(consensusPubKey, chainId));
+                    if(selfAddr.equals(address)){
+                        continue;
+                    }
                     //判断是否存在对应地址信息
                     if (null == group.getConsensusNet(address)) {
                         ConsensusNet consensusNet = new ConsensusNet(consensusPubKey, null);
@@ -166,6 +171,9 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
             }
             if (null != consensusAddrs) {
                 for (String consensusAddr : consensusAddrs) {
+                    if(selfAddr.equals(consensusAddr)){
+                        continue;
+                    }
                     if (null == group.getConsensusNet(consensusAddr)) {
                         ConsensusNet consensusNet = new ConsensusNet(consensusAddr, null);
                         group.addConsensus(consensusNet);
@@ -181,6 +189,9 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
                 }
             }
             for (String address : addresList) {
+                if(selfAddr.equals(address)){
+                    continue;
+                }
                 String nodeId = group.removeConsensus(address);
                 if (null != nodeId) {
                     List<String> ips = new ArrayList<>();
@@ -193,7 +204,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     }
 
     /**
-     * 启动或者自身跃迁为共识节点时候调用。
+     * 启动自身跃迁为共识节点时候调用。
      *
      * @param chainId
      * @param selfPubKey
@@ -215,6 +226,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
         selfConsensusNet.setNodeId(nodeId);
         ConsensusIdentitiesMsg consensusIdentitiesMsg = new ConsensusIdentitiesMsg(selfConsensusNet);
         consensusIdentitiesMsg.setBroadcast(true);
+        String selfAddr = AddressTool.getStringAddressByBytes(AddressTool.getAddress(selfPubKey, chainId));
         for (byte[] pubKey : consensusPubKeyList) {
             if (!ArraysTool.arrayEquals(pubKey, selfPubKey)) {
                 ConsensusNet consensusNet = new ConsensusNet(pubKey, null);
@@ -228,8 +240,10 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
             }
         }
         for (String addr : consensusAddrList) {
-            ConsensusNet consensusNet = new ConsensusNet(addr, null);
-            group.addConsensus(consensusNet);
+            if (!addr.equals(selfAddr)) {
+                ConsensusNet consensusNet = new ConsensusNet(addr, null);
+                group.addConsensus(consensusNet);
+            }
         }
 
         GROUPS_MAP.put(chainId, group);
@@ -248,6 +262,11 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
         } else if (!NETTHREAD_MAP.get(chainId)) {
             NETTHREAD_MAP.put(chainId, true);
         }
+        return true;
+    }
+
+    @Override
+    public boolean createConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusSeedPubKeyList) {
         return true;
     }
 

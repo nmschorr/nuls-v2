@@ -57,6 +57,17 @@ public interface ConsensusNetService {
     boolean initConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusPubKeyList, List<String> consensusAddrList);
 
     /**
+     *
+     * @param chainId
+     * @param selfPubKey
+     * @param selfPrivKey
+     * @param consensusSeedPubKeyList
+     * @return
+     * @description 自身从共识节点变为普通节点时候调用
+     */
+    boolean createConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusSeedPubKeyList);
+
+    /**
      * @param chainId
      * @description 自身从共识节点变为普通节点时候调用
      */
