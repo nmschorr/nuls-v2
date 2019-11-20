@@ -142,7 +142,7 @@ public interface ConsensusConstant {
     /**
      * 向其他节点获取数据超时时间（单位：S）
      * */
-    int GET_DATA_TIME_OUT = 10;
+    int GET_DATA_TIME_OUT = 5;
 
     /**
      * 投票期间各阶段等待时间(ms)

@@ -64,6 +64,8 @@ dependent=cross-chain,smart-contract,protocol-update
 [consensus]
 #种子节点列表
 seedNodes=NULSd6HgdgGTxKWfhEZKhfZSqciBzAkgpVVba,NULSd6HgXQht4JybnU8pScuqbsiRxTH6rr3do
+#种子节点对应的公钥列表
+pubKeyList=NULSd6HgdgGTxKWfhEZKhfZSqciBzAkgpVVba,NULSd6HgXQht4JybnU8pScuqbsiRxTH6rr3do
 #出块地址密码
 password=nuls123456
 #出块间隔时间(单位：s)

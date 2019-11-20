@@ -32,7 +32,13 @@ import io.nuls.pocbft.utils.LoggerUtil;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static io.nuls.pocbft.constant.CommandConstant.CALL_AC_GET_ENCRYPTED_ADDRESS_LIST;
+import static io.nuls.pocbft.constant.ParameterConstant.PARAM_LIST;
+import static io.nuls.pocbft.constant.ParameterConstant.PARAM_PRI_KEY;
+import static io.nuls.pocbft.constant.ParameterConstant.PARAM_PUB_KEY;
 
 /**
  * 链管理类,负责各条链的初始化,运行,启动,参数维护等
@@ -80,6 +86,7 @@ public class ChainManager {
             ChainConfig chainConfig = entry.getValue();
             chain.setConfig(chainConfig);
             chain.setSeedNodeList(List.of(chainConfig.getSeedNodes().split(ConsensusConstant.SEED_NODE_SEPARATOR)));
+            chain.setPubKeyList(List.of(chainConfig.getPubKeyList().split(ConsensusConstant.SEED_NODE_SEPARATOR)));
             /*
              * 初始化链日志对象
              * Initialization Chain Log Objects
@@ -245,6 +252,34 @@ public class ChainManager {
             agentDepositManager.loadReduceDeposits(chain);
         } catch (Exception e) {
             chain.getLogger().error(e);
+        }
+    }
+
+    /**
+     * 初始化共识网络
+     * @param chain chain info
+     * */
+    public void initConsensusNet(Chain chain){
+        Set<String> packAddressList = agentManager.getPackAddressList(chain, chain.getNewestHeader().getHeight());
+        packAddressList.addAll(chain.getSeedNodeList());
+        List<byte[]> localAddressList = CallMethodUtils.getEncryptedAddressList(chain);
+        if(localAddressList.isEmpty()){
+            return;
+        }
+        String packAddress;
+        for (byte[] address:localAddressList) {
+            packAddress = AddressTool.getStringAddressByBytes(address);
+            if(packAddressList.contains(packAddress)){
+                try {
+                    HashMap callResult = CallMethodUtils.accountValid(chain.getChainId(), packAddress, chain.getConfig().getPassword());
+                    String priKey = (String) callResult.get(PARAM_PRI_KEY);
+                    String pubKey = (String) callResult.get(PARAM_PUB_KEY);
+                    return;
+                }catch (Exception e){
+                    chain.getLogger().error(e);
+                }
+
+            }
         }
     }
 

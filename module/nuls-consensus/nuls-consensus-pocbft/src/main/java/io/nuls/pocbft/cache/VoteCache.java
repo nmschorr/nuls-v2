@@ -8,6 +8,7 @@ import io.nuls.pocbft.model.bo.vote.VoteData;
 import io.nuls.pocbft.model.bo.vote.VoteRoundData;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 public class VoteCache {
@@ -52,6 +53,13 @@ public class VoteCache {
      * */
     public static final Map<String, VoteData> FUTURE_VOTE_DATA = new ConcurrentHashMap<>();
 
+
+    /**
+     * 已收结果的投票轮次
+     * key：roundIndex_packIndex_voteRound
+     * value:是否收到结果
+     * */
+    public static final Map<String, CompletableFuture<Boolean>> RECEIVED_VOTE_RESULT = new ConcurrentHashMap<>();
 
     public static void addVoteResult(String currentVoteKey, byte voteRound, VoteResultData voteResultData){
         if (!CONFIRMED_VOTE_RESULT_MAP.containsKey(currentVoteKey)) {

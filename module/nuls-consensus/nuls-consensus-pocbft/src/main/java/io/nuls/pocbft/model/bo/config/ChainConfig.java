@@ -98,6 +98,11 @@ public class ChainConfig extends BaseNulsData {
     private String seedNodes;
 
     /**
+     * 种子节点对应公钥
+     * */
+    private String pubKeyList;
+
+    /**
      * 出块节点密码
      * */
     private String password;
@@ -211,6 +216,14 @@ public class ChainConfig extends BaseNulsData {
 
     public void setSeedNodes(String seedNodes) {
         this.seedNodes = seedNodes;
+    }
+
+    public String getPubKeyList() {
+        return pubKeyList;
+    }
+
+    public void setPubKeyList(String pubKeyList) {
+        this.pubKeyList = pubKeyList;
     }
 
     public int getAssetId() {

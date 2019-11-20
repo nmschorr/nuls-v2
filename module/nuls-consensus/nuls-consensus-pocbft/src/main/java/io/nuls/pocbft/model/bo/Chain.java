@@ -142,6 +142,11 @@ public class Chain {
     private List<String> seedNodeList;
 
     /**
+     * 种子节点公钥列表
+     * */
+    private List<String> pubKeyList;
+
+    /**
      * 线程池
      * */
     private ThreadPoolExecutor threadPool;
@@ -158,6 +163,7 @@ public class Chain {
         this.roundList = new ArrayList<>();
         this.packer = false;
         this.seedNodeList = new ArrayList<>();
+        this.pubKeyList = new ArrayList<>();
         this.appendDepositList = new ArrayList<>();
         this.reduceDepositList = new ArrayList<>();
         this.threadPool =  ThreadUtils.createThreadPool(4, 100, new NulsThreadFactory("consensus"+ getChainId()));
@@ -303,6 +309,14 @@ public class Chain {
 
     public void setSeedNodeList(List<String> seedNodeList) {
         this.seedNodeList = seedNodeList;
+    }
+
+    public List<String> getPubKeyList() {
+        return pubKeyList;
+    }
+
+    public void setPubKeyList(List<String> pubKeyList) {
+        this.pubKeyList = pubKeyList;
     }
 
     public List<ChangeAgentDepositPo> getAppendDepositList() {
