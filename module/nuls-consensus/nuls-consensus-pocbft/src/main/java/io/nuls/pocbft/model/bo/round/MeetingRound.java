@@ -37,6 +37,9 @@ import io.nuls.pocbft.rpc.call.CallMethodUtils;
 import io.nuls.core.exception.NulsRuntimeException;
 import io.nuls.core.log.Log;
 import io.nuls.core.model.StringUtils;
+import io.nuls.pocbft.utils.ConsensusUtil;
+import io.nuls.pocbft.utils.manager.ChainManager;
+
 import java.util.*;
 
 /**
@@ -89,7 +92,7 @@ public class MeetingRound {
      * 本轮次出块节点地址列表
      * Node address list of block out this round
      * */
-    private List<String> memberAddressList;
+    private Set<String> memberAddressList;
 
     public MeetingRound getPreRound() {
         return preRound;
@@ -111,11 +114,11 @@ public class MeetingRound {
         return memberCount;
     }
 
-    public List<String> getMemberAddressList() {
+    public Set<String> getMemberAddressList() {
         return memberAddressList;
     }
 
-    public void setMemberAddressList(List<String> memberAddressList) {
+    public void setMemberAddressList(Set<String> memberAddressList) {
         this.memberAddressList = memberAddressList;
     }
 
@@ -133,11 +136,13 @@ public class MeetingRound {
         }
         Collections.sort(memberList);
         this.memberCount = memberList.size();
+        Set<String> memberAddressList = new HashSet<>();
         MeetingMember member;
         for (int i = 0; i < memberCount; i++) {
             member = memberList.get(i);
             member.setRoundStartTime(this.getStartTime());
             member.setPackingIndexOfRound(i + 1);
+            memberAddressList.add(AddressTool.getStringAddressByBytes(memberList.get(i).getAgent().getPackingAddress()));
         }
     }
 
@@ -223,10 +228,12 @@ public class MeetingRound {
         if(myMember != null && !chain.isPacker()){
             CallMethodUtils.sendState(chain,true);
             chain.setPacker(true);
+            ConsensusUtil.initConsensusNet(chain, AddressTool.getStringAddressByBytes(myMember.getAgent().getPackingAddress()), memberAddressList);
         }
         if(myMember == null && chain.isPacker()){
             CallMethodUtils.sendState(chain,false);
             chain.setPacker(false);
+            ConsensusUtil.disConnectConsenusNet(chain);
         }
     }
 

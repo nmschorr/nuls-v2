@@ -6,10 +6,8 @@ import io.nuls.base.signture.BlockSignature;
 import io.nuls.core.core.annotation.Autowired;
 import io.nuls.core.core.annotation.Component;
 import io.nuls.core.exception.NulsException;
-import io.nuls.core.rpc.util.NulsDateUtils;
 import io.nuls.pocbft.cache.VoteCache;
 import io.nuls.pocbft.constant.CommandConstant;
-import io.nuls.pocbft.constant.ConsensusConstant;
 import io.nuls.pocbft.message.VoteMessage;
 import io.nuls.pocbft.model.bo.Chain;
 import io.nuls.pocbft.model.bo.round.MeetingRound;
@@ -17,7 +15,6 @@ import io.nuls.pocbft.model.bo.vote.VoteData;
 import io.nuls.pocbft.utils.LoggerUtil;
 import io.nuls.pocbft.utils.enumeration.VoteTime;
 import io.nuls.pocbft.utils.manager.ChainManager;
-import io.nuls.pocbft.utils.manager.PubKeyManager;
 import io.nuls.pocbft.utils.manager.RoundManager;
 
 import java.io.IOException;
@@ -88,7 +85,6 @@ public class VoteHandler implements MessageProcessor {
             return;
         }
         message.setAddress(AddressTool.getStringAddressByBytes(AddressTool.getAddress(signature.getPublicKey(), chainId)));
-        PubKeyManager.addPubKey(chain, signature.getPublicKey(), message.getAddress(chain));
 
         if(voteTime == VoteTime.CURRENT_STAGE_ONE){
             boolean isRepeatMessage = VoteCache.CURRENT_BLOCK_VOTE_DATA.isRepeatMessage(message.getVoteRound(), message.getVoteStage(), message.getAddress(chain));

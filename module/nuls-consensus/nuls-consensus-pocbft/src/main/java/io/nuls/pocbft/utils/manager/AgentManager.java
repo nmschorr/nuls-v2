@@ -18,7 +18,7 @@ import io.nuls.pocbft.utils.compare.AgentDepositComparator;
 import java.math.BigInteger;
 import java.util.*;
 
-import static io.nuls.pocbft.utils.TxUtil.getSuccess;
+import static io.nuls.pocbft.utils.ConsensusUtil.getSuccess;
 
 /**
  * 节点管理类，负责节点的相关操作

@@ -65,7 +65,6 @@ public class BlockManager {
         chain.getLogger().info("区块保存，高度为：" + blockHeader.getHeight() + " , txCount: " + blockHeader.getTxCount() + ",本地最新区块高度为：" + chain.getNewestHeader().getHeight() + ", 轮次:" + receiveExtendsData.getRoundIndex());
         //清除已经缓存了的比本节点轮次大的轮次信息
         roundManager.clearRound(chain,receiveRoundIndex);
-        PubKeyManager.addPubKey(chain, blockHeader.getBlockSignature().getPublicKey(), null);
         if(chain.isPacker()){
             //切换当前投票轮次
             VoteManager.switchBlockVoteData(chain, blockHeader);

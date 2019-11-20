@@ -30,6 +30,7 @@ import io.nuls.pocbft.rpc.call.CallMethodUtils;
 import io.nuls.pocbft.rpc.call.NetWorkCall;
 import io.nuls.pocbft.storage.ConfigService;
 import io.nuls.pocbft.storage.PubKeyStorageService;
+import io.nuls.pocbft.utils.ConsensusUtil;
 import io.nuls.pocbft.utils.LoggerUtil;
 import io.nuls.pocnetwork.service.ConsensusNetService;
 
@@ -106,7 +107,11 @@ public class ChainManager {
             param.put(ParamConstant.CONSENUS_CONFIG, new ConsensusConfigInfo(chainId, chainConfig.getAssetId(), chainConfig.getPackingInterval(),
                     chainConfig.getInflationAmount(), chainConfig.getTotalInflationAmount(), chainConfig.getInitTime(), chainConfig.getDeflationRatio(), chainConfig.getDeflationTimeInterval(), chainConfig.getAwardAssetId()));
             economicService.registerConfig(param);
-            PubKeyPo po = pubKeyService.get(chain);
+            List<String> seedNodePubKeyList = List.of(chainConfig.getPubKeyList().split(ConsensusConstant.SEED_NODE_SEPARATOR));
+            for (String pubKey:seedNodePubKeyList) {
+                chain.getSeedNodePubKeyList().add(HexUtil.decode(pubKey));
+            }
+            /*PubKeyPo po = pubKeyService.get(chain);
             if(po == null || po.getPackAddressPubKeyMap().isEmpty()){
                 po = new PubKeyPo();
                 List<String> seedNodePubKeyList = List.of(chainConfig.getPubKeyList().split(ConsensusConstant.SEED_NODE_SEPARATOR));
@@ -115,7 +120,7 @@ public class ChainManager {
                 }
                 pubKeyService.save(po, chain);
             }
-            chain.setPubKeyPo(po);
+            chain.setPubKeyPo(po);*/
         }
     }
 
@@ -140,11 +145,7 @@ public class ChainManager {
      * */
     public void runChain(){
         for (Chain chain:chainMap.values()) {
-            /*
-             * 组建共识网络
-             * */
             initConsensusNet(chain);
-
             /*
             加载链缓存数据
             Load chain caching entity
@@ -231,10 +232,11 @@ public class ChainManager {
             Creating Red and Yellow Card Information Table
             */
             RocksDBService.createTable(ConsensusConstant.DB_NAME_PUNISH + dbNameSuffix);
+
             /*
             节点对应公钥集合
-            */
-            RocksDBService.createTable(ConsensusConstant.DB_NAME_PUB_KEY + dbNameSuffix);
+            RocksDBService.createTable(ConsensusConstant.DB_NAME_PUB_KEY + dbNameSuffix);*/
+
             /*
             创建底层随机数表
             */
@@ -292,15 +294,7 @@ public class ChainManager {
         for (byte[] address:localAddressList) {
             packAddress = AddressTool.getStringAddressByBytes(address);
             if(packAddressList.contains(packAddress)){
-                try {
-                    HashMap callResult = CallMethodUtils.accountValid(chain.getChainId(), packAddress, chain.getConfig().getPassword());
-                    String priKey = (String) callResult.get(PARAM_PRI_KEY);
-                    String pubKey = (String) callResult.get(PARAM_PUB_KEY);
-                    netService.initConsensusNetwork(chain.getChainId(), HexUtil.decode(pubKey), HexUtil.decode(priKey), PubKeyManager.getPubKeyList(chain, packAddressList), packAddressList);
-                    return;
-                }catch (Exception e){
-                    chain.getLogger().error(e);
-                }
+                ConsensusUtil.initConsensusNet(chain, packAddress, packAddressList);
             }
         }
     }

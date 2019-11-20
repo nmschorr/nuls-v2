@@ -8,13 +8,13 @@ import io.nuls.core.exception.NulsException;
 import io.nuls.pocbft.constant.ConsensusErrorCode;
 import io.nuls.pocbft.model.bo.Chain;
 import io.nuls.pocbft.model.bo.tx.txdata.Deposit;
-import io.nuls.pocbft.utils.TxUtil;
+import io.nuls.pocbft.utils.ConsensusUtil;
 import io.nuls.pocbft.utils.validator.base.BaseValidator;
 
 import java.io.IOException;
 import java.math.BigInteger;
 
-import static io.nuls.pocbft.utils.TxUtil.getSuccess;
+import static io.nuls.pocbft.utils.ConsensusUtil.getSuccess;
 
 /**
  * 减少保证金交易验证器
@@ -31,7 +31,7 @@ public class DepositValidator extends BaseValidator {
         Deposit deposit = new Deposit();
         deposit.parse(tx.getTxData(), 0);
         //验证委托金额是否是否小于最小委托金额
-        BigInteger realAmount = TxUtil.getRealAmount(deposit.getDeposit(), deposit.getAssetChainId(), deposit.getAssetId(),tx.getTime());
+        BigInteger realAmount = ConsensusUtil.getRealAmount(deposit.getDeposit(), deposit.getAssetChainId(), deposit.getAssetId(),tx.getTime());
         if(realAmount.compareTo(chain.getConfig().getEntrustMin()) < 0){
             chain.getLogger().error("Deposit -- Less than the minimum entrusted amount");
             return Result.getFailed(ConsensusErrorCode.DEPOSIT_NOT_ENOUGH);

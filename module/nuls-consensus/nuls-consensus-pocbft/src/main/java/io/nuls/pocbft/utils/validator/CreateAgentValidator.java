@@ -22,7 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static io.nuls.pocbft.utils.TxUtil.getSuccess;
+import static io.nuls.pocbft.utils.ConsensusUtil.getSuccess;
 
 /**
  * 创建节点交易验证器

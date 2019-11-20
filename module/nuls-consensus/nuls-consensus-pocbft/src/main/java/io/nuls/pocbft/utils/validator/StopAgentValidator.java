@@ -14,7 +14,7 @@ import io.nuls.pocbft.utils.validator.base.BaseValidator;
 
 import java.io.IOException;
 
-import static io.nuls.pocbft.utils.TxUtil.getSuccess;
+import static io.nuls.pocbft.utils.ConsensusUtil.getSuccess;
 
 /**
  * 注销节点交易验证器

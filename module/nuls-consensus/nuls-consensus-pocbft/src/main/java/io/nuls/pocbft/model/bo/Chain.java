@@ -140,6 +140,8 @@ public class Chain {
      * */
     private ThreadPoolExecutor threadPool;
 
+    private List<byte[]> seedNodePubKeyList;
+
     /**
      * 本链节点出块地址与公钥键值对
      * */
@@ -161,6 +163,7 @@ public class Chain {
         this.reduceDepositList = new ArrayList<>();
         this.threadPool =  ThreadUtils.createThreadPool(4, 100, new NulsThreadFactory("consensus"+ getChainId()));
         this.networkState = false;
+        this.seedNodePubKeyList = new ArrayList<>();
     }
 
 
@@ -338,5 +341,13 @@ public class Chain {
 
     public void setPubKeyPo(PubKeyPo pubKeyPo) {
         this.pubKeyPo = pubKeyPo;
+    }
+
+    public List<byte[]> getSeedNodePubKeyList() {
+        return seedNodePubKeyList;
+    }
+
+    public void setSeedNodePubKeyList(List<byte[]> seedNodePubKeyList) {
+        this.seedNodePubKeyList = seedNodePubKeyList;
     }
 }

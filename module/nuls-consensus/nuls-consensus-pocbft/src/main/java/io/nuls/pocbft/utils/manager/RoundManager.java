@@ -20,6 +20,7 @@ import io.nuls.pocbft.model.bo.tx.txdata.Deposit;
 import io.nuls.pocbft.model.po.PunishLogPo;
 import io.nuls.pocbft.rpc.call.CallMethodUtils;
 import io.nuls.pocbft.utils.enumeration.PunishType;
+import io.nuls.pocnetwork.service.ConsensusNetService;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -36,6 +37,9 @@ import java.util.*;
 public class RoundManager {
     @Autowired
     private AgentManager agentManager;
+
+    @Autowired
+    private ConsensusNetService consensusNetService;
     /**
      * 添加轮次信息到轮次列表中
      * Add Round Information to Round List
@@ -58,13 +62,13 @@ public class RoundManager {
                     preRound = roundList.get(roundList.size() - 1);
                     meetingRound.setPreRound(preRound);
                 }
-                //计算变更的共识节点信息
-
             }
             roundList.add(meetingRound);
             if (roundList.size() > ConsensusConstant.ROUND_CACHE_COUNT) {
                 roundList.remove(0);
             }
+            //通知共识网络最新共识节点出块地址列表
+            consensusNetService.updateConsensusList(chain.getChainId(), meetingRound.getMemberAddressList());
         }finally {
             chain.getRoundLock().unlock();
         }
@@ -127,7 +131,9 @@ public class RoundManager {
             if (startBlockHeader.getHeight() != 0L) {
                 startBlockHeader = getFirstBlockOfPreRound(chain, roundIndex);
             }
-            return calculationRound(chain, startBlockHeader, roundIndex, roundStartTime);
+            round = calculationRound(chain, startBlockHeader, roundIndex, roundStartTime);
+            addRound(chain, round);
+            return round;
         }finally {
             chain.getRoundLock().unlock();
         }
