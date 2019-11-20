@@ -148,7 +148,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
      * @description 更新共识列表, 增加或者减少节点时候调用
      */
     @Override
-    public boolean updateConsensusList(int chainId, String consensusPubKeyStr, String consensusPubKeyAddr, short updateType) {
+    public boolean updateConsensusList(int chainId, String consensusPubKeyStr, String consensusAddr, short updateType) {
         ConsensusNetGroup group = GROUPS_MAP.get(chainId);
         byte[] consensusPubKey = HexUtil.decode(consensusPubKeyStr);
         if (ADD_CONSENSUS == updateType) {
@@ -160,9 +160,9 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
                     group.addConsensus(consensusNet);
                 }
             }
-            if (null != consensusPubKeyAddr) {
-                if (null == group.getConsensusNet(consensusPubKeyAddr)) {
-                    ConsensusNet consensusNet = new ConsensusNet(consensusPubKeyAddr, null);
+            if (null != consensusAddr) {
+                if (null == group.getConsensusNet(consensusAddr)) {
+                    ConsensusNet consensusNet = new ConsensusNet(consensusAddr, null);
                     group.addConsensus(consensusNet);
                 }
             }
@@ -172,7 +172,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
             if (null != consensusPubKeyStr) {
                 address = AddressTool.getStringAddressByBytes(AddressTool.getAddress(consensusPubKey, chainId));
             } else {
-                address = consensusPubKeyAddr;
+                address = consensusAddr;
             }
             nodeId = group.removeConsensus(address);
             if (null != nodeId) {

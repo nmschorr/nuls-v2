@@ -38,12 +38,12 @@ import java.util.List;
 public interface ConsensusNetService {
     /**
      * @param consensusPubKey
-     * @param  consensusPubKeyAddr,
+     * @param  consensusAddr,
      * @param updateType      1 增加  2 删除
      * @description 更新共识列表, 增加或者减少节点时候调用. 只知道地址时候就只给地址
      * @return
      */
-    boolean updateConsensusList(int chainId, String consensusPubKey, String consensusPubKeyAddr,short updateType);
+    boolean updateConsensusList(int chainId, String consensusPubKey, String consensusAddr,short updateType);
 
     /**
      * @param chainId
