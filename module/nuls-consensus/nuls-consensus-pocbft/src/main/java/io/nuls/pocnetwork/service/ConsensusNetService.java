@@ -43,7 +43,7 @@ public interface ConsensusNetService {
      * @description 更新共识列表, 增加或者减少节点时候调用. 只知道地址时候就只给地址
      * @return
      */
-    boolean updateConsensusList(int chainId, List<String> consensusPubKeys, List<String> consensusAddrs,short updateType);
+    boolean updateConsensusList(int chainId, List<byte[]> consensusPubKeys, List<String> consensusAddrs,short updateType);
 
     /**
      * @param chainId
@@ -54,7 +54,7 @@ public interface ConsensusNetService {
      * @description 在成为共识节点时候调用，有公钥的，不用在地址列表里。如果只有共识节点地址的，可以给地址列表consensusAddrList
      * @return
      */
-    boolean initConsensusNetwork(int chainId, String selfPubKey, String selfPrivKey, List<String> consensusPubKeyList, List<String> consensusAddrList);
+    boolean initConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusPubKeyList, List<String> consensusAddrList);
 
     /**
      * @param chainId
