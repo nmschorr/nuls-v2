@@ -1215,7 +1215,7 @@ public class TxServiceImpl implements TxService {
     /**
      * 将孤儿交易加回待打包队列时, 要判断加了几次(因为下次打包时又验证为孤儿交易会再次被加回), 达到阈值就不再加回了
      */
-    private void addOrphanTxSet(Chain chain, Set<TxPackageWrapper> orphanTxSet, TxPackageWrapper txPackageWrapper) {
+    public void addOrphanTxSet(Chain chain, Set<TxPackageWrapper> orphanTxSet, TxPackageWrapper txPackageWrapper) {
         NulsHash hash = txPackageWrapper.getTx().getHash();
         Integer count = chain.getTxPackageOrphanMap().get(hash);
         if (count == null || count < TxConstant.PACKAGE_ORPHAN_MAXCOUNT) {
@@ -1245,7 +1245,7 @@ public class TxServiceImpl implements TxService {
      * @param txList      验证通过的交易
      * @param orphanTxSet 孤儿交易
      */
-    private void putBackPackablePool(Chain chain, List<TxPackageWrapper> txList, Set<TxPackageWrapper> orphanTxSet) {
+    public void putBackPackablePool(Chain chain, List<TxPackageWrapper> txList, Set<TxPackageWrapper> orphanTxSet) {
         if (null == txList) {
             txList = new ArrayList<>();
         }
@@ -1255,7 +1255,7 @@ public class TxServiceImpl implements TxService {
         if (txList.isEmpty()) {
             return;
         }
-        //孤儿交易排倒序,全加回待打包队列去
+        //孤儿交易排倒序, 全加回待打包队列去
         txList.sort(new Comparator<TxPackageWrapper>() {
             @Override
             public int compare(TxPackageWrapper o1, TxPackageWrapper o2) {
@@ -1268,7 +1268,7 @@ public class TxServiceImpl implements TxService {
         chain.getLogger().info("putBackPackablePool count:{}", txList.size());
     }
 
-    private void putBackPackablePool(Chain chain, Set<TxPackageWrapper> orphanTxSet) {
+    public void putBackPackablePool(Chain chain, Set<TxPackageWrapper> orphanTxSet) {
         putBackPackablePool(chain, null, orphanTxSet);
     }
 
@@ -1280,7 +1280,7 @@ public class TxServiceImpl implements TxService {
      *
      * @param moduleVerifyMap
      */
-    private boolean txModuleValidatorPackable(Chain chain, Map<String, List<String>> moduleVerifyMap, List<TxPackageWrapper> packingTxList, Set<TxPackageWrapper> orphanTxSet) throws NulsException {
+    public boolean txModuleValidatorPackable(Chain chain, Map<String, List<String>> moduleVerifyMap, List<TxPackageWrapper> packingTxList, Set<TxPackageWrapper> orphanTxSet) throws NulsException {
         Iterator<Map.Entry<String, List<String>>> it = moduleVerifyMap.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<String, List<String>> entry = it.next();

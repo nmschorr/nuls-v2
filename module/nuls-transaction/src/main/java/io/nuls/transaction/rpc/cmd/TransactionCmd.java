@@ -26,6 +26,7 @@ import io.nuls.transaction.model.bo.VerifyLedgerResult;
 import io.nuls.transaction.model.dto.ModuleTxRegisterDTO;
 import io.nuls.transaction.model.po.TransactionConfirmedPO;
 import io.nuls.transaction.service.ConfirmedTxService;
+import io.nuls.transaction.service.TxPackageService;
 import io.nuls.transaction.service.TxService;
 import io.nuls.transaction.utils.TxUtil;
 
@@ -45,6 +46,8 @@ public class TransactionCmd extends BaseCmd {
 
     @Autowired
     private TxService txService;
+    @Autowired
+    private TxPackageService txPackageService;
     @Autowired
     private ConfirmedTxService confirmedTxService;
     @Autowired
@@ -134,14 +137,10 @@ public class TransactionCmd extends BaseCmd {
     @Parameters(value = {
             @Parameter(parameterName = "chainId", requestType = @TypeDescriptor(value = int.class), parameterDes = "链id"),
             @Parameter(parameterName = "endTimestamp", requestType = @TypeDescriptor(value = long.class), parameterDes = "截止时间"),
-            @Parameter(parameterName = "maxTxDataSize", requestType = @TypeDescriptor(value = int.class), parameterDes = "交易集最大容量"),
-            @Parameter(parameterName = "blockTime", requestType = @TypeDescriptor(value = long.class), parameterDes = "本次出块区块时间"),
-            @Parameter(parameterName = "packingAddress", parameterType = "String", parameterDes = "当前出块地址"),
-            @Parameter(parameterName = "preStateRoot", parameterType = "String", parameterDes = "前一个区块的状态根")
+            @Parameter(parameterName = "maxTxDataSize", requestType = @TypeDescriptor(value = int.class), parameterDes = "交易集最大容量")
     })
-    @ResponseData(name = "返回值", description = "返回一个Map，包含三个key", responseType = @TypeDescriptor(value = Map.class, mapKeys = {
+    @ResponseData(name = "返回值", description = "返回一个Map，包含两个key", responseType = @TypeDescriptor(value = Map.class, mapKeys = {
             @Key(name = "list", valueType = List.class, valueElement = String.class, description = "可打包交易集"),
-            @Key(name = "stateRoot", description = "当前出块的状态根"),
             @Key(name = "packageHeight", valueType = long.class, description = "本次打包区块的高度")
     }))
     public Response packableTxs(Map params) {
@@ -150,9 +149,6 @@ public class TransactionCmd extends BaseCmd {
             ObjectUtils.canNotEmpty(params.get("chainId"), TxErrorCode.PARAMETER_ERROR.getMsg());
             ObjectUtils.canNotEmpty(params.get("endTimestamp"), TxErrorCode.PARAMETER_ERROR.getMsg());
             ObjectUtils.canNotEmpty(params.get("maxTxDataSize"), TxErrorCode.PARAMETER_ERROR.getMsg());
-            ObjectUtils.canNotEmpty(params.get("blockTime"), TxErrorCode.PARAMETER_ERROR.getMsg());
-            ObjectUtils.canNotEmpty(params.get("packingAddress"), TxErrorCode.PARAMETER_ERROR.getMsg());
-            ObjectUtils.canNotEmpty(params.get("preStateRoot"), TxErrorCode.PARAMETER_ERROR.getMsg());
             chain = chainManager.getChain((Integer) params.get("chainId"));
             if (null == chain) {
                 throw new NulsException(TxErrorCode.CHAIN_NOT_FOUND);
@@ -161,15 +157,9 @@ public class TransactionCmd extends BaseCmd {
             long endTimestamp =  Long.parseLong(params.get("endTimestamp").toString());
             //交易数据最大容量值
             int maxTxDataSize = (int) params.get("maxTxDataSize");
-
-            long blockTime = Long.parseLong(params.get("blockTime").toString());
-            String packingAddress = (String) params.get("packingAddress");
-            String preStateRoot = (String) params.get("preStateRoot");
-
-            TxPackage txPackage = txService.getPackableTxs(chain, endTimestamp, maxTxDataSize, blockTime, packingAddress, preStateRoot);
+            TxPackage txPackage = txPackageService.packageBasic(chain, endTimestamp, maxTxDataSize);
             Map<String, Object> map = new HashMap<>(TxConstant.INIT_CAPACITY_4);
             map.put("list", txPackage.getList());
-            map.put("stateRoot", txPackage.getStateRoot());
             map.put("packageHeight", txPackage.getPackageHeight());
             return success(map);
         } catch (NulsException e) {
