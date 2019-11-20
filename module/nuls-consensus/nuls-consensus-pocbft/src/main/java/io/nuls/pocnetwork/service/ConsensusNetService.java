@@ -29,6 +29,7 @@ import io.nuls.pocnetwork.model.ConsensusKeys;
 import io.nuls.pocnetwork.model.ConsensusNet;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author lanjinsheng
@@ -54,7 +55,7 @@ public interface ConsensusNetService {
      * @description 在成为共识节点时候调用，有公钥的，不用在地址列表里。如果只有共识节点地址的，可以给地址列表consensusAddrList
      * @return
      */
-    boolean initConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusPubKeyList, List<String> consensusAddrList);
+    boolean initConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusPubKeyList, Set<String> consensusAddrList);
 
     /**
      *

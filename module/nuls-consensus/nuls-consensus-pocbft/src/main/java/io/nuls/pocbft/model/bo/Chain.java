@@ -1,8 +1,5 @@
 package io.nuls.pocbft.model.bo;
-
-import io.nuls.base.basic.AddressTool;
 import io.nuls.base.data.BlockHeader;
-import io.nuls.base.data.NulsHash;
 import io.nuls.base.data.Transaction;
 import io.nuls.core.thread.ThreadUtils;
 import io.nuls.core.thread.commom.NulsThreadFactory;
@@ -10,16 +7,13 @@ import io.nuls.pocbft.model.bo.config.ChainConfig;
 import io.nuls.pocbft.model.bo.consensus.Evidence;
 import io.nuls.pocbft.model.bo.round.MeetingRound;
 import io.nuls.pocbft.model.bo.tx.txdata.Agent;
-import io.nuls.pocbft.model.bo.tx.txdata.ChangeAgentDepositData;
 import io.nuls.pocbft.model.bo.tx.txdata.Deposit;
 import io.nuls.pocbft.model.po.ChangeAgentDepositPo;
+import io.nuls.pocbft.model.po.PubKeyPo;
 import io.nuls.pocbft.model.po.PunishLogPo;
 import io.nuls.pocbft.utils.enumeration.ConsensusStatus;
 import io.nuls.core.log.logback.NulsLogger;
-
-import java.math.BigInteger;
 import java.util.*;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -142,14 +136,14 @@ public class Chain {
     private List<String> seedNodeList;
 
     /**
-     * 种子节点公钥列表
-     * */
-    private List<String> pubKeyList;
-
-    /**
      * 线程池
      * */
     private ThreadPoolExecutor threadPool;
+
+    /**
+     * 本链节点出块地址与公钥键值对
+     * */
+    private PubKeyPo pubKeyPo;
 
     public Chain() {
         this.consensusStatus = ConsensusStatus.RUNNING;
@@ -163,7 +157,6 @@ public class Chain {
         this.roundList = new ArrayList<>();
         this.packer = false;
         this.seedNodeList = new ArrayList<>();
-        this.pubKeyList = new ArrayList<>();
         this.appendDepositList = new ArrayList<>();
         this.reduceDepositList = new ArrayList<>();
         this.threadPool =  ThreadUtils.createThreadPool(4, 100, new NulsThreadFactory("consensus"+ getChainId()));
@@ -311,14 +304,6 @@ public class Chain {
         this.seedNodeList = seedNodeList;
     }
 
-    public List<String> getPubKeyList() {
-        return pubKeyList;
-    }
-
-    public void setPubKeyList(List<String> pubKeyList) {
-        this.pubKeyList = pubKeyList;
-    }
-
     public List<ChangeAgentDepositPo> getAppendDepositList() {
         return appendDepositList;
     }
@@ -345,5 +330,13 @@ public class Chain {
 
     public int getConsensusAgentCountMax(){
         return config.getAgentCountMax() - seedNodeList.size();
+    }
+
+    public PubKeyPo getPubKeyPo() {
+        return pubKeyPo;
+    }
+
+    public void setPubKeyPo(PubKeyPo pubKeyPo) {
+        this.pubKeyPo = pubKeyPo;
     }
 }

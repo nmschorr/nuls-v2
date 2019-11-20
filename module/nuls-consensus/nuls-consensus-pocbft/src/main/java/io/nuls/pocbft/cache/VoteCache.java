@@ -6,6 +6,8 @@ import io.nuls.pocbft.model.bo.Chain;
 import io.nuls.pocbft.model.bo.vote.VoteResultData;
 import io.nuls.pocbft.model.bo.vote.VoteData;
 import io.nuls.pocbft.model.bo.vote.VoteRoundData;
+import io.nuls.pocbft.utils.FIFOCache;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -44,7 +46,7 @@ public class VoteCache {
      *        key:voteRound（区块最终投票结果该值填0）
      *        value:该轮次确认结果
      * */
-    public static final Map<String, Map<Byte, VoteResultData>> CONFIRMED_VOTE_RESULT_MAP = new HashMap<>();
+    public static final FIFOCache<String, Map<Byte, VoteResultData>> CONFIRMED_VOTE_RESULT_MAP = new FIFOCache<>(ConsensusConstant.BLOCK_VOTE_CACHE_COUNT);
 
     /**
      * 待处理确认数据
@@ -53,13 +55,11 @@ public class VoteCache {
      * */
     public static final Map<String, VoteData> FUTURE_VOTE_DATA = new ConcurrentHashMap<>();
 
+    public static boolean VOTE_ROUND_CHANGED = false;
 
-    /**
-     * 已收结果的投票轮次
-     * key：roundIndex_packIndex_voteRound
-     * value:是否收到结果
-     * */
-    public static final Map<String, CompletableFuture<Boolean>> RECEIVED_VOTE_RESULT = new ConcurrentHashMap<>();
+    public static void initCurrentVoteRound(long roundIndex, int packIndex, int agentCount, long height, long roundStartTime){
+        CURRENT_BLOCK_VOTE_DATA = new VoteData(roundIndex, packIndex, agentCount, height, roundStartTime);
+    }
 
     public static void addVoteResult(String currentVoteKey, byte voteRound, VoteResultData voteResultData){
         if (!CONFIRMED_VOTE_RESULT_MAP.containsKey(currentVoteKey)) {
@@ -109,6 +109,7 @@ public class VoteCache {
                 CURRENT_ROUND_STAGE_TOW_MESSAGE_QUEUE.addAll(CURRENT_BLOCK_VOTE_DATA.getStageVoteMessage(ConsensusConstant.VOTE_STAGE_TWO).values());
             }
         }
+        VOTE_ROUND_CHANGED = true;
     }
 
     /**
@@ -153,6 +154,7 @@ public class VoteCache {
            FUTURE_VOTE_DATA.entrySet().removeIf(entry -> (entry.getValue().getRoundIndex() < currentRoundIndex ||
                    (entry.getValue().getRoundIndex() == currentRoundIndex && entry.getValue().getPackingIndexOfRound() < currentPackIndex)));
         }
+        VOTE_ROUND_CHANGED = true;
     }
 
     /**

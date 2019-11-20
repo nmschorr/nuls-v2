@@ -6,6 +6,7 @@ import io.nuls.base.protocol.ProtocolLoader;
 import io.nuls.base.protocol.RegisterHelper;
 import io.nuls.core.core.annotation.Autowired;
 import io.nuls.core.core.annotation.Component;
+import io.nuls.core.crypto.HexUtil;
 import io.nuls.core.exception.NulsException;
 import io.nuls.core.log.Log;
 import io.nuls.core.rockdb.constant.DBErrorCode;
@@ -24,15 +25,15 @@ import io.nuls.pocbft.model.bo.Chain;
 import io.nuls.pocbft.model.bo.round.MeetingMember;
 import io.nuls.pocbft.model.bo.round.MeetingRound;
 import io.nuls.pocbft.model.bo.vote.VoteData;
+import io.nuls.pocbft.model.po.PubKeyPo;
 import io.nuls.pocbft.rpc.call.CallMethodUtils;
 import io.nuls.pocbft.rpc.call.NetWorkCall;
 import io.nuls.pocbft.storage.ConfigService;
+import io.nuls.pocbft.storage.PubKeyStorageService;
 import io.nuls.pocbft.utils.LoggerUtil;
+import io.nuls.pocnetwork.service.ConsensusNetService;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static io.nuls.pocbft.constant.CommandConstant.CALL_AC_GET_ENCRYPTED_ADDRESS_LIST;
@@ -67,7 +68,10 @@ public class ChainManager {
     private EconomicService economicService;
     @Autowired
     private AgentDepositManager agentDepositManager;
-
+    @Autowired
+    private PubKeyStorageService pubKeyService;
+    @Autowired
+    private ConsensusNetService netService;
     private final Map<Integer, Chain> chainMap = new ConcurrentHashMap<>();
 
     /**
@@ -86,7 +90,6 @@ public class ChainManager {
             ChainConfig chainConfig = entry.getValue();
             chain.setConfig(chainConfig);
             chain.setSeedNodeList(List.of(chainConfig.getSeedNodes().split(ConsensusConstant.SEED_NODE_SEPARATOR)));
-            chain.setPubKeyList(List.of(chainConfig.getPubKeyList().split(ConsensusConstant.SEED_NODE_SEPARATOR)));
             /*
              * 初始化链日志对象
              * Initialization Chain Log Objects
@@ -103,6 +106,16 @@ public class ChainManager {
             param.put(ParamConstant.CONSENUS_CONFIG, new ConsensusConfigInfo(chainId, chainConfig.getAssetId(), chainConfig.getPackingInterval(),
                     chainConfig.getInflationAmount(), chainConfig.getTotalInflationAmount(), chainConfig.getInitTime(), chainConfig.getDeflationRatio(), chainConfig.getDeflationTimeInterval(), chainConfig.getAwardAssetId()));
             economicService.registerConfig(param);
+            PubKeyPo po = pubKeyService.get(chain);
+            if(po == null || po.getPackAddressPubKeyMap().isEmpty()){
+                po = new PubKeyPo();
+                List<String> seedNodePubKeyList = List.of(chainConfig.getPubKeyList().split(ConsensusConstant.SEED_NODE_SEPARATOR));
+                for (int i = 0; i< chain.getSeedNodeList().size(); i++) {
+                    po.getPackAddressPubKeyMap().put(chain.getSeedNodeList().get(i), HexUtil.decode(seedNodePubKeyList.get(i)));
+                }
+                pubKeyService.save(po, chain);
+            }
+            chain.setPubKeyPo(po);
         }
     }
 
@@ -127,6 +140,11 @@ public class ChainManager {
      * */
     public void runChain(){
         for (Chain chain:chainMap.values()) {
+            /*
+             * 组建共识网络
+             * */
+            initConsensusNet(chain);
+
             /*
             加载链缓存数据
             Load chain caching entity
@@ -214,6 +232,10 @@ public class ChainManager {
             */
             RocksDBService.createTable(ConsensusConstant.DB_NAME_PUNISH + dbNameSuffix);
             /*
+            节点对应公钥集合
+            */
+            RocksDBService.createTable(ConsensusConstant.DB_NAME_PUB_KEY + dbNameSuffix);
+            /*
             创建底层随机数表
             */
             RocksDBService.createTable(ConsensusConstant.DB_NAME_RANDOM_SEEDS + dbNameSuffix);
@@ -274,11 +296,11 @@ public class ChainManager {
                     HashMap callResult = CallMethodUtils.accountValid(chain.getChainId(), packAddress, chain.getConfig().getPassword());
                     String priKey = (String) callResult.get(PARAM_PRI_KEY);
                     String pubKey = (String) callResult.get(PARAM_PUB_KEY);
+                    netService.initConsensusNetwork(chain.getChainId(), HexUtil.decode(pubKey), HexUtil.decode(priKey), PubKeyManager.getPubKeyList(chain, packAddressList), packAddressList);
                     return;
                 }catch (Exception e){
                     chain.getLogger().error(e);
                 }
-
             }
         }
     }
@@ -302,7 +324,7 @@ public class ChainManager {
                 MeetingMember member = round.getMyMember();
                 if(member != null && member.getPackingIndexOfRound() == 1){
                     roundManager.addRound(chain, round);
-                    VoteCache.CURRENT_BLOCK_VOTE_DATA = new VoteData(round.getIndex(), member.getPackingIndexOfRound(), round.getMemberCount(), chain.getNewestHeader().getHeight() + 1, round.getStartTime());;
+                    VoteCache.initCurrentVoteRound(round.getIndex(), member.getPackingIndexOfRound(), round.getMemberCount(), chain.getNewestHeader().getHeight() + 1, round.getStartTime());
                 }
             }catch (NulsException e){
                 chain.getLogger().error(e);

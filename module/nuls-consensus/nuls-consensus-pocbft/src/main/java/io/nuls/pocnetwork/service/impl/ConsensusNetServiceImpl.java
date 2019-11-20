@@ -70,10 +70,7 @@ import io.nuls.pocnetwork.service.ConsensusNetService;
 import io.nuls.pocnetwork.service.NetworkService;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -213,7 +210,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
      * @return
      */
     @Override
-    public boolean initConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusPubKeyList, List<String> consensusAddrList) {
+    public boolean initConsensusNetwork(int chainId, byte[] selfPubKey, byte[] selfPrivKey, List<byte[]> consensusPubKeyList, Set<String> consensusAddrList) {
         Chain chain = chainManager.getChainMap().get(chainId);
         ConsensusNetGroup group = new ConsensusNetGroup(chainId);
         ConsensusKeys consensusKeys = new ConsensusKeys(selfPubKey, selfPrivKey);
