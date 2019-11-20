@@ -27,6 +27,7 @@ public interface ConsensusConstant {
     String DB_NAME_PUNISH = "punish";
     String DB_NAME_CONFIG = "config";
     String DB_NAME_RANDOM_SEEDS = "random_seed";
+    String DB_NAME_PUB_KEY = "pubKey";
 
     byte[] EMPTY_SEED = new byte[32];
     /**
@@ -169,4 +170,9 @@ public interface ConsensusConstant {
 
 
     long INIT_ROUND_INDEX = 2;
+
+    /**
+     * 区块投票信息缓存数
+     * */
+    int BLOCK_VOTE_CACHE_COUNT = 50;
  }

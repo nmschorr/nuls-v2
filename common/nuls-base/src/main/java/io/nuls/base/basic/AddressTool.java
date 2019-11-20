@@ -207,6 +207,19 @@ public class AddressTool {
     /**
      * 根据公钥查询地址字节数组
      *
+     * @param publicKey
+     * @param chainId
+     * @return
+     */
+    public static String getAddressString(byte[] publicKey, int chainId) {
+        String prefix = getPrefix(chainId);
+        byte[] addressByte = getAddress(publicKey, chainId, prefix);
+        return getStringAddressByBytes(addressByte);
+    }
+
+    /**
+     * 根据公钥查询地址字节数组
+     *
      * @param publicKeyStr
      * @param chainId
      * @return

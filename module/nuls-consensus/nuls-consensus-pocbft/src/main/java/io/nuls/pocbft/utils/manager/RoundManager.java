@@ -52,8 +52,14 @@ public class RoundManager {
             } else {
                 rollBackRound(chain, meetingRound.getIndex() - 1);
             }
-            if (roundList.size() > 0 && meetingRound.getPreRound() == null) {
-                meetingRound.setPreRound(roundList.get(roundList.size() - 1));
+            if(meetingRound.getIndex() != ConsensusConstant.INIT_ROUND_INDEX){
+                MeetingRound preRound = meetingRound.getPreRound();
+                if(preRound == null){
+                    preRound = roundList.get(roundList.size() - 1);
+                    meetingRound.setPreRound(preRound);
+                }
+                //计算变更的共识节点信息
+
             }
             roundList.add(meetingRound);
             if (roundList.size() > ConsensusConstant.ROUND_CACHE_COUNT) {
@@ -113,6 +119,10 @@ public class RoundManager {
     public MeetingRound getRound(Chain chain, long roundIndex, long roundStartTime) throws NulsException{
         try{
             chain.getRoundLock().lock();
+            MeetingRound round = getRoundByIndex(chain, roundIndex);
+            if(round != null){
+                return round;
+            }
             BlockHeader startBlockHeader = chain.getNewestHeader();
             if (startBlockHeader.getHeight() != 0L) {
                 startBlockHeader = getFirstBlockOfPreRound(chain, roundIndex);

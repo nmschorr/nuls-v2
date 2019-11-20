@@ -17,6 +17,7 @@ import io.nuls.pocbft.model.bo.vote.VoteData;
 import io.nuls.pocbft.utils.LoggerUtil;
 import io.nuls.pocbft.utils.enumeration.VoteTime;
 import io.nuls.pocbft.utils.manager.ChainManager;
+import io.nuls.pocbft.utils.manager.PubKeyManager;
 import io.nuls.pocbft.utils.manager.RoundManager;
 
 import java.io.IOException;
@@ -56,6 +57,7 @@ public class VoteHandler implements MessageProcessor {
         if(VoteCache.CURRENT_BLOCK_VOTE_DATA == null){
             try {
                 MeetingRound round = roundManager.getRound(chain, message.getRoundIndex(), message.getRoundStartTime());
+                roundManager.addRound(chain, round);
                 VoteCache.CURRENT_BLOCK_VOTE_DATA = new VoteData(message.getRoundIndex(), message.getPackingIndexOfRound(), round.getMemberCount(), message.getHeight(), message.getRoundStartTime());
             }catch (Exception e){
                 chain.getLogger().error(e);
@@ -86,6 +88,7 @@ public class VoteHandler implements MessageProcessor {
             return;
         }
         message.setAddress(AddressTool.getStringAddressByBytes(AddressTool.getAddress(signature.getPublicKey(), chainId)));
+        PubKeyManager.addPubKey(chain, signature.getPublicKey(), message.getAddress(chain));
 
         if(voteTime == VoteTime.CURRENT_STAGE_ONE){
             boolean isRepeatMessage = VoteCache.CURRENT_BLOCK_VOTE_DATA.isRepeatMessage(message.getVoteRound(), message.getVoteStage(), message.getAddress(chain));
