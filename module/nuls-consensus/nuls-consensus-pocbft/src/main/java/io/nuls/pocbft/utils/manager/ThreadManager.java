@@ -2,10 +2,7 @@ package io.nuls.pocbft.utils.manager;
 
 import io.nuls.pocbft.model.bo.Chain;
 import io.nuls.core.core.annotation.Component;
-import io.nuls.pocbft.utils.thread.NetworkProcessor;
-import io.nuls.pocbft.utils.thread.StageOneVoteCollector;
-import io.nuls.pocbft.utils.thread.StageTwoVoteCollector;
-import io.nuls.pocbft.utils.thread.VoteProcessor;
+import io.nuls.pocbft.utils.thread.*;
 
 /**
  * 共识模块任务管理器
@@ -30,7 +27,7 @@ public class ThreadManager {
         chain.getThreadPool().execute(new VoteProcessor(chain));
         chain.getThreadPool().execute(new StageOneVoteCollector(chain));
         chain.getThreadPool().execute(new StageTwoVoteCollector(chain));
-        chain.getThreadPool().execute(new VoteProcessor(chain));
+        chain.getThreadPool().execute(new VoteResultProcessor(chain));
     }
     public void createConsensusNetThread(Chain chain){
         chain.getThreadPool().execute(new NetworkProcessor(chain));
