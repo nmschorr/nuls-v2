@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -194,7 +195,7 @@ public class VoteManager {
      * @param round          轮次信息
      */
     private static boolean verifySignature(Chain chain, VoteResultData voteResultData, MeetingRound round) {
-        List<String> memberAddressList = round.getMemberAddressList();
+        Set<String> memberAddressList = round.getMemberAddressList();
         for (VoteResultItem item : voteResultData.getVoteResultItemList()) {
             NulsHash voteHash;
             try {
