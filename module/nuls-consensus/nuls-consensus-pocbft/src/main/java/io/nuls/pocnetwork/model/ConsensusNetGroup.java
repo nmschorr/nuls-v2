@@ -24,7 +24,7 @@
  */
 package io.nuls.pocnetwork.model;
 
-import io.nuls.core.crypto.HexUtil;
+import io.nuls.base.basic.AddressTool;
 import io.nuls.pocbft.model.bo.Chain;
 
 import java.util.ArrayList;
@@ -44,6 +44,9 @@ public class ConsensusNetGroup {
 
     boolean available = false;
     private int chainId;
+    /**
+     * KEY 用地址
+     */
     private Map<String, ConsensusNet> group = new ConcurrentHashMap<>();
 
     public int getChainId() {
@@ -63,7 +66,20 @@ public class ConsensusNetGroup {
     }
 
     public void addConsensus(ConsensusNet consensusNet) {
-        group.put(HexUtil.encode(consensusNet.getPubKey()), consensusNet);
+        if (null == consensusNet.getAddress()) {
+            consensusNet.setAddress(AddressTool.getStringAddressByBytes(AddressTool.getAddress(consensusNet.getPubKey(), chainId)));
+        }
+        group.put(consensusNet.getAddress(), consensusNet);
+
+    }
+
+    public ConsensusNet getConsensusNet(String address) {
+        return group.get(address);
+    }
+
+    public ConsensusNet getConsensusNet(byte[] pubKey) {
+        String address = AddressTool.getStringAddressByBytes(AddressTool.getAddress(pubKey, chainId));
+        return group.get(address);
     }
 
     public boolean isAvailable() {
@@ -112,13 +128,12 @@ public class ConsensusNetGroup {
         return ips;
     }
 
-    public String removeConsensus(byte[] consensusPubKey) {
-        String key = HexUtil.encode(consensusPubKey);
-        ConsensusNet consensusNet = group.get(key);
+    public String removeConsensus(String address) {
+        ConsensusNet consensusNet = group.get(address);
         if (null == consensusNet) {
             return null;
         }
-        group.remove(key);
+        group.remove(address);
         return consensusNet.getNodeId();
     }
 }

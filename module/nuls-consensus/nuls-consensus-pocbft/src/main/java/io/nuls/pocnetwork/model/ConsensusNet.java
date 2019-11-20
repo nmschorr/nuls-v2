@@ -44,12 +44,18 @@ public class ConsensusNet extends BaseNulsData {
         this.nodeId = nodeId;
     }
 
+    public ConsensusNet(String address, String nodeId) {
+        this.address = address;
+        this.nodeId = nodeId;
+    }
+
     public ConsensusNet() {
     }
 
     private byte[] pubKey;
     private String nodeId;
-    private boolean hadConnect = false;
+    private transient boolean hadConnect = false;
+    private transient String address = "";
 
     @Override
     protected void serializeToStream(NulsOutputStreamBuffer stream) throws IOException {
@@ -77,7 +83,7 @@ public class ConsensusNet extends BaseNulsData {
     }
 
     public void setPubKey(byte[] pubKey) {
-        this.pubKey = pubKey;
+        this.pubKey = ByteUtils.copyOf(pubKey, pubKey.length);
     }
 
     public String getNodeId() {
@@ -94,5 +100,13 @@ public class ConsensusNet extends BaseNulsData {
 
     public void setHadConnect(boolean hadConnect) {
         this.hadConnect = hadConnect;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 }

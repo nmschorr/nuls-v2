@@ -29,6 +29,7 @@ import io.nuls.core.exception.CryptoException;
 import io.nuls.core.exception.NulsException;
 import io.nuls.core.model.ArraysTool;
 import io.nuls.core.parse.SerializeUtils;
+import io.nuls.core.rpc.util.NulsDateUtils;
 import io.nuls.pocnetwork.model.ConsensusNet;
 import io.nuls.pocnetwork.model.message.sub.NodeIdentity;
 
@@ -52,6 +53,7 @@ public class ConsensusIdentitiesMsg extends BaseBusinessMessage {
 
     public ConsensusIdentitiesMsg(ConsensusNet consensusNet) {
         this.consensusNet = consensusNet;
+        messageTime = NulsDateUtils.getCurrentTimeSeconds();
     }
 
     public ConsensusIdentitiesMsg() {

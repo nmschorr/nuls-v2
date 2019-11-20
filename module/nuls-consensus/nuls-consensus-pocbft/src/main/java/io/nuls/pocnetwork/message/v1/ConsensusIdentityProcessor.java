@@ -32,12 +32,12 @@ import io.nuls.core.core.annotation.Component;
 import io.nuls.core.crypto.HexUtil;
 import io.nuls.pocbft.model.bo.Chain;
 import io.nuls.pocbft.utils.manager.ChainManager;
+import io.nuls.pocnetwork.constant.NetworkCmdConstant;
 import io.nuls.pocnetwork.model.ConsensusKeys;
 import io.nuls.pocnetwork.model.ConsensusNet;
 import io.nuls.pocnetwork.model.message.ConsensusIdentitiesMsg;
 import io.nuls.pocnetwork.service.ConsensusNetService;
 import io.nuls.pocnetwork.service.NetworkService;
-
 
 import java.util.ArrayList;
 import java.util.List;
@@ -102,7 +102,7 @@ public class ConsensusIdentityProcessor implements MessageProcessor {
         Chain chain = chainManager.getChainMap().get(chainId);
         chain.getLogger().debug("recv csIndentity msg");
         ConsensusIdentitiesMsg message = RPCUtil.getInstanceRpcStr(msgStr, ConsensusIdentitiesMsg.class);
-        chain.getLogger().debug("msgHash={} recv from node={}", message.getMsgHash().toHex(),nodeId);
+        chain.getLogger().debug("msgHash={} recv from node={}", message.getMsgHash().toHex(), nodeId);
         if (duplicateMsg(message)) {
             chain.getLogger().debug("msgHash={} is duplicate,drop msg", message.getMsgHash().toHex());
             return;
@@ -120,34 +120,40 @@ public class ConsensusIdentityProcessor implements MessageProcessor {
                 return;
             }
             //解出的包,需要判断对方是否共识节点
-
-            if (!consensusNetService.isConsensusNode(chainId, consensusNet)) {
+            ConsensusNet dbConsensusNet = consensusNetService.getConsensusNode(chainId, consensusNet);
+            if (null == dbConsensusNet) {
                 //这边需要注意，此时如果共识节点列表里面还没有该节点，可能就会误判，所以必须保障 在收到消息时候，共识列表里已经存在该消息。
                 chain.getLogger().error("nodeId = {} not in consensus Group", consensusNet.getNodeId());
                 return;
             }
+            //之前没有节点的ip，或者没有连接上，则可以重新告知对方自己的身份
+            boolean sendIdentityMsg = (null == dbConsensusNet.getNodeId() || !dbConsensusNet.getNodeId().equals(consensusNet.getNodeId()) || !dbConsensusNet.isHadConnect());
+            //可能没公钥，更新下公钥信息
             String consensusNetNodeId = consensusNet.getNodeId();
-            chain.getLogger().debug("begin connect {}",consensusNetNodeId);
+            dbConsensusNet.setNodeId(consensusNetNodeId);
+            dbConsensusNet.setPubKey(consensusNet.getPubKey());
+            chain.getLogger().debug("begin connect {}", consensusNetNodeId);
             boolean isConnect = networkService.connectPeer(chainId, consensusNetNodeId);
             if (!isConnect) {
                 chain.getLogger().warn("connect fail .nodeId = {}", consensusNet.getNodeId());
-            }else{
-                chain.getLogger().debug("connect {} success",consensusNetNodeId);
+            } else {
+                chain.getLogger().debug("connect {} success", consensusNetNodeId);
                 List<String> ips = new ArrayList<>();
                 ips.add(consensusNet.getNodeId().split(":")[0]);
-                networkService.addIps(chainId,"POC",ips);
-                chainManager.consensusNodeLink(chain,consensusNet.getNodeId());
+                networkService.addIps(chainId, NetworkCmdConstant.NW_GROUP_FLAG, ips);
+                chainManager.consensusNodeLink(chain, consensusNet.getNodeId());
             }
-            //更新共识连接组,并且返回之前未连接
-            if (!consensusNetService.updateConsensusNode(chainId, consensusNet, isConnect)) {
-                //向对方发送身份信息
-                chain.getLogger().debug("bengin sendIdentityMessage {} success",consensusNetNodeId);
-                networkService.sendIdentityMessage(chainId, consensusNetNodeId,consensusNet.getPubKey());
+            //更新共识连接组
+            consensusNetService.updateConsensusNode(chainId, consensusNet, isConnect);
+            //需要向对方发送身份信息
+            if (sendIdentityMsg) {
+                chain.getLogger().debug("bengin sendIdentityMessage {} success", consensusNetNodeId);
+                networkService.sendIdentityMessage(chainId, consensusNetNodeId, consensusNet.getPubKey());
             }
         }
         if (message.isBroadcast()) {
 //        广播转发消息
-            chain.getLogger().debug("bengin broadCastIdentityMsg exclude={} success",nodeId);
+            chain.getLogger().debug("bengin broadCastIdentityMsg exclude={} success", nodeId);
             networkService.broadCastIdentityMsg(chainId, getCmd(), msgStr, nodeId);
         }
         chain.getLogger().debug("=====================consensusIdentityProcessor deal end");

@@ -32,5 +32,5 @@ public interface NetworkCmdConstant {
     String NW_GET_EXTRANET_IP = "nw_extranet_ip";
     String NW_BROADCAST = "nw_broadcast";
     String NW_BROADCAST_CONSENSUS_NET = "nw_sendByIps";
-
+    String NW_GROUP_FLAG="POC";
 }

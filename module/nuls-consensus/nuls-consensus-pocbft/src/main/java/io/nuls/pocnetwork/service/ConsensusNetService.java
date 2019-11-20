@@ -38,19 +38,29 @@ import java.util.List;
 public interface ConsensusNetService {
     /**
      * @param consensusPubKey
+     * @param  consensusPubKeyAddr,
      * @param updateType      1 增加  2 删除
-     * @description 更新共识列表, 增加或者减少节点时候调用
+     * @description 更新共识列表, 增加或者减少节点时候调用. 只知道地址时候就只给地址
+     * @return
      */
-    boolean updateConsensusList(int chainId, String consensusPubKey, short updateType);
+    boolean updateConsensusList(int chainId, String consensusPubKey, String consensusPubKeyAddr,short updateType);
 
     /**
      * @param chainId
      * @param selfPubKey
      * @param selfPrivKey
      * @param consensusPubKeyList
+     * @param consensusAddrList
+     * @description 在成为共识节点时候调用，有公钥的，不用在地址列表里。如果只有共识节点地址的，可以给地址列表consensusAddrList
      * @return
      */
-    boolean initConsensusNetwork(int chainId, String selfPubKey, String selfPrivKey, List<String> consensusPubKeyList);
+    boolean initConsensusNetwork(int chainId, String selfPubKey, String selfPrivKey, List<String> consensusPubKeyList, List<String> consensusAddrList);
+
+    /**
+     * @param chainId
+     * @description 自身从共识节点变为普通节点时候调用
+     */
+    void cleanConsensusNetwork(int chainId);
 
     /**
      * 广播共识消息
@@ -62,20 +72,17 @@ public interface ConsensusNetService {
      */
     List<String> broadCastConsensusNet(int chainId, String cmd, String messageBodyHex);
 
-    /**
-     * @param chainId
-     */
-    void cleanConsensusNetwork(int chainId);
 
     ConsensusKeys getSelfConsensusKeys(int chainId);
 
-    boolean isConsensusNode(int chainId, ConsensusNet consensusNet);
+    ConsensusNet getConsensusNode(int chainId, ConsensusNet consensusNet);
 
     boolean updateConsensusNode(int chainId, ConsensusNet consensusNet, boolean isConnect);
 
     void printTestInfo();
 
     boolean netStatusChange(Chain chain);
+
     boolean getNetStatus(Chain chain);
 
 }

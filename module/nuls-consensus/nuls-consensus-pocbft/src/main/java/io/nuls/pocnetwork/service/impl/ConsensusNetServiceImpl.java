@@ -48,6 +48,7 @@ package io.nuls.pocnetwork.service.impl;
  *
  */
 
+import io.nuls.base.basic.AddressTool;
 import io.nuls.core.core.annotation.Autowired;
 import io.nuls.core.core.annotation.Component;
 import io.nuls.core.crypto.HexUtil;
@@ -88,8 +89,14 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     private ThreadManager threadManager;
     @Autowired
     NetworkService networkService;
+    /**
+     * 共识网络信息
+     */
     static Map<Integer, ConsensusNetGroup> GROUPS_MAP = new ConcurrentHashMap<>();
     static Map<Integer, Boolean> NETTHREAD_MAP = new ConcurrentHashMap<>();
+    /**
+     * 自身公私钥信息
+     */
     static Map<Integer, ConsensusKeys> CONSENSUSKEYS_MAP = new ConcurrentHashMap<>();
     static final short ADD_CONSENSUS = 1;
     static final short DEL_CONSENSUS = 2;
@@ -121,7 +128,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     public boolean netStatusChange(Chain chain) {
         ConsensusNetGroup group = GROUPS_MAP.get(chain.getChainId());
         if (null != group) {
-            return group.statusChange(67, chain);
+            return group.statusChange(1, chain);
         }
         return false;
     }
@@ -141,18 +148,37 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
      * @description 更新共识列表, 增加或者减少节点时候调用
      */
     @Override
-    public boolean updateConsensusList(int chainId, String consensusPubKeyStr, short updateType) {
+    public boolean updateConsensusList(int chainId, String consensusPubKeyStr, String consensusPubKeyAddr, short updateType) {
         ConsensusNetGroup group = GROUPS_MAP.get(chainId);
         byte[] consensusPubKey = HexUtil.decode(consensusPubKeyStr);
         if (ADD_CONSENSUS == updateType) {
-            ConsensusNet consensusNet = new ConsensusNet(consensusPubKey, null);
-            group.addConsensus(consensusNet);
+            if (null != consensusPubKeyStr) {
+                String address = AddressTool.getStringAddressByBytes(AddressTool.getAddress(consensusPubKey, chainId));
+                //判断是否存在对应地址信息
+                if (null == group.getConsensusNet(address)) {
+                    ConsensusNet consensusNet = new ConsensusNet(consensusPubKey, null);
+                    group.addConsensus(consensusNet);
+                }
+            }
+            if (null != consensusPubKeyAddr) {
+                if (null == group.getConsensusNet(consensusPubKeyAddr)) {
+                    ConsensusNet consensusNet = new ConsensusNet(consensusPubKeyAddr, null);
+                    group.addConsensus(consensusNet);
+                }
+            }
         } else if (DEL_CONSENSUS == updateType) {
-            String nodeId = group.removeConsensus(consensusPubKey);
+            String nodeId = null;
+            String address = null;
+            if (null != consensusPubKeyStr) {
+                address = AddressTool.getStringAddressByBytes(AddressTool.getAddress(consensusPubKey, chainId));
+            } else {
+                address = consensusPubKeyAddr;
+            }
+            nodeId = group.removeConsensus(address);
             if (null != nodeId) {
                 List<String> ips = new ArrayList<>();
                 ips.add(nodeId.split(":")[0]);
-                networkService.removeIps(chainId, ModuleE.CS.abbr, ips);
+                networkService.removeIps(chainId, NetworkCmdConstant.NW_GROUP_FLAG, ips);
             }
         }
         return true;
@@ -168,7 +194,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
      * @return
      */
     @Override
-    public boolean initConsensusNetwork(int chainId, String selfPubKeyStr, String selfPrivKeyStr, List<String> consensusPubKeyList) {
+    public boolean initConsensusNetwork(int chainId, String selfPubKeyStr, String selfPrivKeyStr, List<String> consensusPubKeyList, List<String> consensusAddrList) {
         Chain chain = chainManager.getChainMap().get(chainId);
         ConsensusNetGroup group = new ConsensusNetGroup(chainId);
         byte[] selfPubKey = HexUtil.decode(selfPubKeyStr);
@@ -196,6 +222,11 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
                 }
             }
         }
+        for (String addr : consensusAddrList) {
+            ConsensusNet consensusNet = new ConsensusNet(addr, null);
+            group.addConsensus(consensusNet);
+        }
+
         GROUPS_MAP.put(chainId, group);
         CONSENSUSKEYS_MAP.put(chainId, consensusKeys);
         //广播身份消息
@@ -206,9 +237,11 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
             chain.getLogger().error(e);
             return false;
         }
-        if (null == NETTHREAD_MAP.get(chainId) || !NETTHREAD_MAP.get(chainId)) {
+        if (null == NETTHREAD_MAP.get(chainId)) {
             NETTHREAD_MAP.put(chainId, true);
             threadManager.createConsensusNetThread(chain);
+        } else if (!NETTHREAD_MAP.get(chainId)) {
+            NETTHREAD_MAP.put(chainId, true);
         }
         return true;
     }
@@ -217,6 +250,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     public void cleanConsensusNetwork(int chainId) {
         GROUPS_MAP.remove(chainId);
         CONSENSUSKEYS_MAP.remove(chainId);
+        NETTHREAD_MAP.put(chainId, false);
     }
 
     @Override
@@ -225,25 +259,23 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     }
 
     @Override
-    public boolean isConsensusNode(int chainId, ConsensusNet consensusNet) {
+    public ConsensusNet getConsensusNode(int chainId, ConsensusNet consensusNet) {
         ConsensusNetGroup consensusNetGroup = GROUPS_MAP.get(chainId);
         if (null == consensusNetGroup) {
-            return false;
+            return null;
         }
-        if (null != consensusNetGroup.getGroup().get(HexUtil.encode(consensusNet.getPubKey()))) {
-            return true;
-        }
-        return false;
+        return consensusNetGroup.getConsensusNet(HexUtil.encode(consensusNet.getPubKey()));
     }
+
 
     @Override
     public boolean updateConsensusNode(int chainId, ConsensusNet consensusNet, boolean isConnect) {
         ConsensusNetGroup consensusNetGroup = GROUPS_MAP.get(chainId);
-        ConsensusNet consensusNet1 = consensusNetGroup.getGroup().get(HexUtil.encode(consensusNet.getPubKey()));
-        boolean orgConn = (null != consensusNet1.getNodeId() && consensusNet1.getNodeId().equals(consensusNet.getNodeId())) && consensusNet1.isHadConnect();
+        ConsensusNet consensusNet1 = consensusNetGroup.getConsensusNet(HexUtil.encode(consensusNet.getPubKey()));
         consensusNet1.setNodeId(consensusNet.getNodeId());
+        consensusNet1.setPubKey(consensusNet.getPubKey());
         consensusNet1.setHadConnect(isConnect);
-        return orgConn;
+        return true;
     }
 
 
