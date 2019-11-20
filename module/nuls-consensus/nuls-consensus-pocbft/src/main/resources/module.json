@@ -13,7 +13,7 @@
   "appendAgentDepositMin": 200000000000,
   "reduceAgentDepositMin": 200000000000,
   "blockReward": 0,
-  "blockMaxSize": 4900000,
+  "blockMaxSize": 490000,
   "moduleCode": "cs",
   "byzantineRate": 66,
   "agentCountMax": 3,

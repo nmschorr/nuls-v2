@@ -23,17 +23,11 @@ import io.nuls.core.rpc.util.NulsDateUtils;
 import io.nuls.pocbft.constant.ConsensusConstant;
 import io.nuls.pocbft.constant.ConsensusErrorCode;
 import io.nuls.pocbft.constant.ParameterConstant;
-import io.nuls.pocbft.message.VoteMessage;
 import io.nuls.pocbft.model.bo.Chain;
-import io.nuls.pocbft.model.bo.round.MeetingMember;
-import io.nuls.pocbft.utils.LoggerUtil;
 import io.nuls.pocbft.utils.compare.BlockHeaderComparator;
-
 import static io.nuls.pocbft.constant.ParameterConstant.*;
 import static io.nuls.pocbft.constant.CommandConstant.*;
 
-
-import java.io.IOException;
 import java.util.*;
 
 /**
@@ -44,8 +38,8 @@ import java.util.*;
  * 2018/12/26
  */
 public class CallMethodUtils {
-    public static final long MIN_PACK_SURPLUS_TIME = 2000;
-    public static final long TIME_OUT = 1000;
+    public static final long MIN_PACK_SURPLUS_TIME = 600;
+    public static final long TIME_OUT = 400;
 
     /**
      * 账户验证
@@ -265,23 +259,19 @@ public class CallMethodUtils {
      * @param chain chain info
      */
     @SuppressWarnings("unchecked")
-    public static Map<String,Object> getPackingTxList(Chain chain, long blockTime, String packingAddress) {
+    public static Map<String,Object> getPackingTxList(Chain chain, long blockTime) {
         try {
             long realTime = blockTime * 1000;
             Map<String, Object> params = new HashMap(4);
             params.put(Constants.CHAIN_ID, chain.getConfig().getChainId());
             long currentTime = NulsDateUtils.getCurrentTimeMillis();
-            long surplusTime = realTime - currentTime;
+            long surplusTime = currentTime - realTime;
             if(surplusTime <= MIN_PACK_SURPLUS_TIME){
                 return null;
             }
             params.put(PARAM_END_TIME_STAMP, realTime - TIME_OUT);
             params.put(PARAM_MAX_TX_SIZE, chain.getConfig().getBlockMaxSize());
-            params.put(PARAM_BLOCK_TIME, blockTime);
-            params.put(PARAM_PACKING_ADDRESS, packingAddress);
-            BlockExtendsData preExtendsData = chain.getNewestHeader().getExtendsData();
-            byte[] preStateRoot = preExtendsData.getStateRoot();
-            params.put(PARAM_PRE_STATE_ROOT, RPCUtil.encode(preStateRoot));
+
             Response cmdResp = ResponseMessageProcessor.requestAndResponse(ModuleE.TX.abbr, CALL_TX_PACKABLE_TXS, params,surplusTime-TIME_OUT);
             if (!cmdResp.isSuccess()) {
                 chain.getLogger().error("Packaging transaction acquisition failure!");
@@ -612,34 +602,6 @@ public class CallMethodUtils {
             return (Map) ((Map) callResp.getResponseData()).get(CALL_PU_GET_VERSION);
         } catch (Exception e) {
             throw new NulsException(e);
-        }
-    }
-
-
-    /**
-     * 触发CoinBase智能合约
-     * Acquire account lock-in amount and available balance
-     *
-     * @param chainId
-     */
-    @SuppressWarnings("unchecked")
-    public static String triggerContract(int chainId,String stateRoot,long height,String contractAddress,String coinBaseTx) {
-        Map<String, Object> params = new HashMap(4);
-        params.put(Constants.CHAIN_ID, chainId);
-        params.put("stateRoot", stateRoot);
-        params.put("blockHeight", height);
-        params.put("contractAddress", contractAddress);
-        params.put("tx", coinBaseTx);
-        try {
-            Response callResp = ResponseMessageProcessor.requestAndResponse(ModuleE.SC.abbr, "sc_trigger_payable_for_consensus_contract", params);
-            if (!callResp.isSuccess()) {
-                return null;
-            }
-            HashMap result = (HashMap) ((HashMap) callResp.getResponseData()).get("sc_trigger_payable_for_consensus_contract");
-            return (String) result.get("value");
-        } catch (Exception e) {
-            Log.error(e);
-            return null;
         }
     }
 }

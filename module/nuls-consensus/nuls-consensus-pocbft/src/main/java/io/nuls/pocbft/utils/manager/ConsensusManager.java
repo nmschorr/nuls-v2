@@ -56,7 +56,7 @@ public class ConsensusManager {
         supportRandomSeed(extendsData, chainId, packingAddress, packageHeight);
 
         //组装区块打包交易
-        bd.setTxList(assembleBlockTx(chain, bd, packingAddressString));
+        bd.setTxList(assembleBlockTx(chain, bd));
 
         /*
         组装系统交易（CoinBase/红牌/黄牌）
@@ -103,12 +103,12 @@ public class ConsensusManager {
     }
 
     @SuppressWarnings("unchecked")
-    private static List<Transaction> assembleBlockTx(Chain chain, BlockData bd, String packingAddressString){
+    private static List<Transaction> assembleBlockTx(Chain chain, BlockData bd){
         /*
          * 获取打包的交易
          */
         BlockExtendsData extendsData = chain.getNewestHeader().getExtendsData();
-        Map<String, Object> resultMap = CallMethodUtils.getPackingTxList(chain, bd.getTime(), packingAddressString);
+        Map<String, Object> resultMap = CallMethodUtils.getPackingTxList(chain, bd.getTime());
         List<Transaction> packingTxList = new ArrayList<>();
         if (resultMap == null) {
             bd.getExtendsData().setStateRoot(extendsData.getStateRoot());
@@ -136,7 +136,7 @@ public class ConsensusManager {
         /*
          * 获取打包的交易
          */
-        Map<String, Object> resultMap = CallMethodUtils.getPackingTxList(chain, bd.getTime(), packingAddressString);
+        Map<String, Object> resultMap = CallMethodUtils.getPackingTxList(chain, bd.getTime());
         List<Transaction> packingTxList = new ArrayList<>();
         /*
          * 检查组装交易过程中是否收到新区块
