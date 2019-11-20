@@ -143,42 +143,52 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
     }
 
     /**
-     * @param consensusPubKeyStr
-     * @param updateType         1 增加  2 删除
+     * @param chainId
+     * @param consensusPubKeys
+     * @param consensusAddrs,
+     * @param updateType       1 增加  2 删除
+     * @return
      * @description 更新共识列表, 增加或者减少节点时候调用
      */
     @Override
-    public boolean updateConsensusList(int chainId, String consensusPubKeyStr, String consensusAddr, short updateType) {
+    public boolean updateConsensusList(int chainId, List<String> consensusPubKeys, List<String> consensusAddrs, short updateType) {
         ConsensusNetGroup group = GROUPS_MAP.get(chainId);
-        byte[] consensusPubKey = HexUtil.decode(consensusPubKeyStr);
         if (ADD_CONSENSUS == updateType) {
-            if (null != consensusPubKeyStr) {
-                String address = AddressTool.getStringAddressByBytes(AddressTool.getAddress(consensusPubKey, chainId));
-                //判断是否存在对应地址信息
-                if (null == group.getConsensusNet(address)) {
-                    ConsensusNet consensusNet = new ConsensusNet(consensusPubKey, null);
-                    group.addConsensus(consensusNet);
+            if (null != consensusPubKeys) {
+                for (String consensusPubKeyStr : consensusPubKeys) {
+                    byte[] consensusPubKey = HexUtil.decode(consensusPubKeyStr);
+                    String address = AddressTool.getStringAddressByBytes(AddressTool.getAddress(consensusPubKey, chainId));
+                    //判断是否存在对应地址信息
+                    if (null == group.getConsensusNet(address)) {
+                        ConsensusNet consensusNet = new ConsensusNet(consensusPubKey, null);
+                        group.addConsensus(consensusNet);
+                    }
                 }
             }
-            if (null != consensusAddr) {
-                if (null == group.getConsensusNet(consensusAddr)) {
-                    ConsensusNet consensusNet = new ConsensusNet(consensusAddr, null);
-                    group.addConsensus(consensusNet);
+            if (null != consensusAddrs) {
+                for (String consensusAddr : consensusAddrs) {
+                    if (null == group.getConsensusNet(consensusAddr)) {
+                        ConsensusNet consensusNet = new ConsensusNet(consensusAddr, null);
+                        group.addConsensus(consensusNet);
+                    }
                 }
             }
         } else if (DEL_CONSENSUS == updateType) {
-            String nodeId = null;
-            String address = null;
-            if (null != consensusPubKeyStr) {
-                address = AddressTool.getStringAddressByBytes(AddressTool.getAddress(consensusPubKey, chainId));
-            } else {
-                address = consensusAddr;
+            List<String> addresList = new ArrayList<>();
+            if (null != consensusPubKeys) {
+                for (String consensusPubKeyStr : consensusPubKeys) {
+                    byte[] consensusPubKey = HexUtil.decode(consensusPubKeyStr);
+                    String address = AddressTool.getStringAddressByBytes(AddressTool.getAddress(consensusPubKey, chainId));
+                    addresList.add(address);
+                }
             }
-            nodeId = group.removeConsensus(address);
-            if (null != nodeId) {
-                List<String> ips = new ArrayList<>();
-                ips.add(nodeId.split(":")[0]);
-                networkService.removeIps(chainId, NetworkCmdConstant.NW_GROUP_FLAG, ips);
+            for (String address : addresList) {
+                String nodeId = group.removeConsensus(address);
+                if (null != nodeId) {
+                    List<String> ips = new ArrayList<>();
+                    ips.add(nodeId.split(":")[0]);
+                    networkService.removeIps(chainId, NetworkCmdConstant.NW_GROUP_FLAG, ips);
+                }
             }
         }
         return true;
