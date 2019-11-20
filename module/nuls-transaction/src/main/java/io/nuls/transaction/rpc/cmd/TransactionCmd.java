@@ -182,9 +182,8 @@ public class TransactionCmd extends BaseCmd {
             @Parameter(parameterName = "endTimestamp", requestType = @TypeDescriptor(value = long.class), parameterDes = "截止时间"),
             @Parameter(parameterName = "maxTxDataSize", requestType = @TypeDescriptor(value = int.class), parameterDes = "交易集最大容量")
     })
-    @ResponseData(name = "返回值", description = "返回一个Map，包含两个key", responseType = @TypeDescriptor(value = Map.class, mapKeys = {
-            @Key(name = "list", valueType = List.class, valueElement = String.class, description = "可打包交易集"),
-            @Key(name = "packageHeight", valueType = long.class, description = "本次打包区块的高度")
+    @ResponseData(name = "返回值", description = "返回一个Map，包含一个key", responseType = @TypeDescriptor(value = Map.class, mapKeys = {
+            @Key(name = "list", valueType = List.class, valueElement = String.class, description = "可打包交易集")
     }))
     public Response packableTxs(Map params) {
         Chain chain = null;
