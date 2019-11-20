@@ -208,7 +208,7 @@ public class ConsensusNetServiceImpl implements ConsensusNetService {
         }
         if (null == NETTHREAD_MAP.get(chainId) || !NETTHREAD_MAP.get(chainId)) {
             NETTHREAD_MAP.put(chainId, true);
-            threadManager.createChainThread(chain);
+            threadManager.createConsensusNetThread(chain);
         }
         return true;
     }
