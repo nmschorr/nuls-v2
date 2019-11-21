@@ -44,4 +44,7 @@ public interface TxPackageService {
      * @return
      */
     List<String> packageBasic (Chain chain, long endtimestamp, long maxTxDataSize);
+
+    boolean verifyBlockTransations(Chain chain, List<String> txStrList, String blockHeaderStr) throws Exception;
+
 }

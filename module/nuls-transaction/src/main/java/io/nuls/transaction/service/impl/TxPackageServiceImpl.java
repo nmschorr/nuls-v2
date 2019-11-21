@@ -25,6 +25,7 @@
 package io.nuls.transaction.service.impl;
 
 import io.nuls.base.RPCUtil;
+import io.nuls.base.data.BlockHeader;
 import io.nuls.base.data.NulsHash;
 import io.nuls.base.data.Transaction;
 import io.nuls.core.core.annotation.Autowired;
@@ -33,21 +34,29 @@ import io.nuls.core.exception.NulsException;
 import io.nuls.core.log.logback.NulsLogger;
 import io.nuls.core.rpc.model.ModuleE;
 import io.nuls.core.rpc.util.NulsDateUtils;
+import io.nuls.core.thread.ThreadUtils;
+import io.nuls.core.thread.commom.NulsThreadFactory;
 import io.nuls.transaction.cache.PackablePool;
 import io.nuls.transaction.constant.TxConstant;
 import io.nuls.transaction.constant.TxErrorCode;
 import io.nuls.transaction.manager.TxManager;
-import io.nuls.transaction.model.bo.Chain;
-import io.nuls.transaction.model.bo.TxPackage;
-import io.nuls.transaction.model.bo.TxPackageWrapper;
-import io.nuls.transaction.model.bo.TxRegister;
+import io.nuls.transaction.model.bo.*;
 import io.nuls.transaction.model.po.TransactionNetPO;
 import io.nuls.transaction.rpc.call.LedgerCall;
+import io.nuls.transaction.rpc.call.TransactionCall;
 import io.nuls.transaction.service.TxPackageService;
 import io.nuls.transaction.service.TxService;
+import io.nuls.transaction.storage.ConfirmedTxStorageService;
+import io.nuls.transaction.storage.UnconfirmedTxStorageService;
 import io.nuls.transaction.utils.TxUtil;
 
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+
+import static io.nuls.transaction.constant.TxConstant.CACHED_SIZE;
 
 /**
  * @author: Charlie
@@ -61,6 +70,16 @@ public class TxPackageServiceImpl implements TxPackageService {
 
     @Autowired
     private TxService txService;
+
+    @Autowired
+    private ConfirmedTxStorageService confirmedTxStorageService;
+
+    @Autowired
+    private UnconfirmedTxStorageService unconfirmedTxStorageService;
+
+    private ExecutorService verifySignExecutor = ThreadUtils.createThreadPool(Runtime.getRuntime().availableProcessors(),
+            CACHED_SIZE, new NulsThreadFactory(TxConstant.BASIC_VERIFY_TX_SIGN_THREAD));
+
     /**
      * 打包交易
      * 适用于不包含智能合约交易的区块链
@@ -130,15 +149,15 @@ public class TxPackageServiceImpl implements TxPackageService {
             }
 
             long current = NulsDateUtils.getCurrentTimeMillis();
-            if (endtimestamp - current < TxConstant.PACKAGE_RPC_RESERVE_TIME) {
+            if (endtimestamp - current < TxConstant.BASIC_PACKAGE_RPC_RESERVE_TIME) {
                 //超时,留给最后数据组装和RPC传输时间不足
                 log.error("getPackableTxs time out, endtimestamp:{}, current:{}, endtimestamp-current:{}, reserveTime:{}",
-                        endtimestamp, current, endtimestamp - current, TxConstant.PACKAGE_RPC_RESERVE_TIME);
+                        endtimestamp, current, endtimestamp - current, TxConstant.BASIC_PACKAGE_RPC_RESERVE_TIME);
                 throw new NulsException(TxErrorCode.PACKAGE_TIME_OUT);
             }
             long totalTime = NulsDateUtils.getCurrentTimeMillis() - startTime;
-            log.debug("[打包时间统计] 总可用:{}ms, 总执行:{}, 收集交易与账本验证:{}, 模块统一验证:{}",
-                    packableTime, totalTime, collectTime, batchModuleTime);
+            log.debug("[打包时间统计] 总可用:{}ms, 总执行:{}, 总剩余:{}, 收集交易与账本验证:{}, 模块统一验证:{}",
+                    packableTime, totalTime, packableTime-totalTime, collectTime, batchModuleTime);
 
             log.info("[Package end] - height:{} - 本次打包交易数:{} - 当前待打包队列交易hash数:{}, - 待打包队列实际交易数:{}" + TxUtil.nextLine(),
                     height, packableTxs.size(), packablePool.packableHashQueueSize(chain), packablePool.packableTxMapSize(chain));
@@ -174,7 +193,7 @@ public class TxPackageServiceImpl implements TxPackageService {
         for (int index = 0; ; index++) {
             long currentTimeMillis = NulsDateUtils.getCurrentTimeMillis();
             long currentReserve = endtimestamp - currentTimeMillis;
-            log.debug("remaining:{}",currentReserve);
+//            log.debug("remaining:{}",currentReserve);
             if (currentReserve <= TxConstant.BASIC_PACKAGE_RESERVE_TIME) {
                 if(log.isDebugEnabled()) {
                     log.debug("获取交易时间到,进入模块验证阶段: currentTimeMillis:{}, -endtimestamp:{}, -offset:{}, -remaining:{}",
@@ -183,10 +202,10 @@ public class TxPackageServiceImpl implements TxPackageService {
                 backTempPackablePool(chain, currentBatchPackableTxs);
                 break;
             }
-            if (currentReserve < TxConstant.PACKAGE_RPC_RESERVE_TIME) {
+            if (currentReserve < TxConstant.BASIC_PACKAGE_RPC_RESERVE_TIME) {
                 //超时,留给最后数据组装和RPC传输时间不足
                 log.error("getPackableTxs time out, endtimestamp:{}, current:{}, endtimestamp-current:{}, reserveTime:{}",
-                        endtimestamp, currentTimeMillis, currentReserve, TxConstant.PACKAGE_RPC_RESERVE_TIME);
+                        endtimestamp, currentTimeMillis, currentReserve, TxConstant.BASIC_PACKAGE_RPC_RESERVE_TIME);
                 backTempPackablePool(chain, currentBatchPackableTxs);
                 throw new NulsException(TxErrorCode.PACKAGE_TIME_OUT);
             }
@@ -197,14 +216,14 @@ public class TxPackageServiceImpl implements TxPackageService {
                 txService.putBackPackablePool(chain, packingTxList, orphanTxSet);
                 return false;
             }
-            /*if (packingTxList.size() > TxConstant.BASIC_PACKAGE_TX_MAX_COUNT) {
+            if (packingTxList.size() >= TxConstant.BASIC_PACKAGE_TX_MAX_COUNT) {
                 if(log.isDebugEnabled()) {
                     log.debug("获取交易已达max count,进入模块验证阶段: currentTimeMillis:{}, -endtimestamp:{}, -offset:{}, -remaining:{}",
                             currentTimeMillis, endtimestamp, TxConstant.BASIC_PACKAGE_RESERVE_TIME, endtimestamp - currentTimeMillis);
                 }
                 backTempPackablePool(chain, currentBatchPackableTxs);
                 break;
-            }*/
+            }
             int batchProcessListSize = batchProcessList.size();
             boolean process = false;
             Transaction tx = null;
@@ -381,12 +400,153 @@ public class TxPackageServiceImpl implements TxPackageService {
         }
     }
 
+    @Override
+    public boolean verifyBlockTransations(Chain chain, List<String> txStrList, String blockHeaderStr) throws Exception {
+        long s1 = NulsDateUtils.getCurrentTimeMillis();
+        NulsLogger log = chain.getLogger();
+        BlockHeader blockHeader = TxUtil.getInstanceRpcStr(blockHeaderStr, BlockHeader.class);
+        long blockHeight = blockHeader.getHeight();
+        boolean isLogDebug = log.isDebugEnabled();
+        if(isLogDebug) {
+            log.debug("[验区块交易] 开始 -----高度:{} -----区块交易数:{}", blockHeight, txStrList.size());
+        }
+        List<TxVerifyWrapper> txList = new ArrayList<>();
+        //组装统一验证参数数据,key为各模块统一验证器cmd
+        Map<String, List<String>> moduleVerifyMap = new HashMap<>(TxConstant.INIT_CAPACITY_8);
+        List<byte[]> keys = new ArrayList<>();
+        for (String txStr : txStrList) {
+            Transaction tx = TxUtil.getInstanceRpcStr(txStr, Transaction.class);
+            txList.add(new TxVerifyWrapper(tx, txStr));
+            TxRegister txRegister = TxManager.getTxRegister(chain, tx.getType());
+            if (null == txRegister) {
+                throw new NulsException(TxErrorCode.TX_TYPE_INVALID);
+            }
+            keys.add(tx.getHash().getBytes());
+            TxUtil.moduleGroups(moduleVerifyMap, txRegister, txStr);
+        }
+        boolean isUncfm = isTxConfirmed(chain, keys);
+        if(!isUncfm) {
+            throw new NulsException(TxErrorCode.TX_CONFIRMED);
+        }
+
+        //验证本地没有的交易
+        List<Future<Boolean>> futures = new ArrayList<>();
+        verifyNonLocalTxs(chain, futures, keys, txList);
+        keys = null;
+
+        //验证账本
+        long coinDataV = NulsDateUtils.getCurrentTimeMillis();
+        if (!LedgerCall.verifyBlockTxsCoinData(chain, txStrList, blockHeight)) {
+            throw new NulsException(TxErrorCode.TX_LEDGER_VERIFY_FAIL);
+        }
+        if(isLogDebug) {
+            log.debug("[验区块交易] coinData -距方法开始的时间:{}，-验证时间:{}",
+                    NulsDateUtils.getCurrentTimeMillis() - s1, NulsDateUtils.getCurrentTimeMillis() - coinDataV);
+        }
+        //模块统一验证器
+        long moduleV = NulsDateUtils.getCurrentTimeMillis();
+        Iterator<Map.Entry<String, List<String>>> it = moduleVerifyMap.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, List<String>> entry = it.next();
+            List<String> txHashList = TransactionCall.txModuleValidator(chain,
+                    entry.getKey(), entry.getValue(), blockHeaderStr);
+            if (txHashList != null && txHashList.size() > 0) {
+                if(isLogDebug) {
+                    log.debug("batch module verify fail, module-code:{},  return count:{}", entry.getKey(), txHashList.size());
+                }
+                throw new NulsException(TxErrorCode.TX_VERIFY_FAIL);
+            }
+        }
+        if(isLogDebug) {
+            log.debug("[验区块交易] 模块统一验证时间:{}", NulsDateUtils.getCurrentTimeMillis() - moduleV);
+            log.debug("[验区块交易] 模块统一验证 -距方法开始的时间:{}", NulsDateUtils.getCurrentTimeMillis() - s1);
+        }
+        //检查[验证本地没有的交易]的多线程处理结果
+        checkbaseValidateResult(chain, futures);
+
+        if(isLogDebug) {
+            log.debug("[验区块交易] 合计执行时间:{}, - 高度:{} - 区块交易数:{}" + TxUtil.nextLine(),
+                    NulsDateUtils.getCurrentTimeMillis() - s1, blockHeight, txStrList.size());
+        }
+        return true;
+    }
+
     /**
-     * 出空块
-     * @param height
-     * @return
+     * 验证是否含有已确认交易
      */
-    public TxPackage emptyBlock(String preStateRoot, long height){
-        return new TxPackage(new ArrayList<>(), preStateRoot, height);
+    private boolean isTxConfirmed(Chain chain, List<byte[]> keys) {
+        List<byte[]> confirmedList = confirmedTxStorageService.getExistTxs(chain.getChainId(), keys);
+        if (!confirmedList.isEmpty()) {
+            NulsLogger log = chain.getLogger();
+            log.error("There are confirmed transactions");
+            try {
+                for (byte[] cfmtx : confirmedList) {
+                    log.error("confirmed hash:{}", TxUtil.getTransaction(cfmtx).getHash().toHex());
+                }
+            } finally {
+                log.error("Show confirmed transaction deserialize fail");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 开启多线程 对不在本地的未确认数据库中的交易, 进行基础验证
+     */
+    private void verifyNonLocalTxs(Chain chain, List<Future<Boolean>> futures, List<byte[]> keys,  List<TxVerifyWrapper> txList){
+        //获取区块的交易中, 在未确认数据库中存在的交易
+        List<String> unconfirmedList = unconfirmedTxStorageService.getExistKeysStr(chain.getChainId(), keys);
+        Set<String> set = new HashSet<>();
+        set.addAll(unconfirmedList);
+        unconfirmedList = null;
+        for (TxVerifyWrapper txVerifyWrapper : txList) {
+            Transaction tx = txVerifyWrapper.getTx();
+            //能加入表明未确认中没有,则需要处理
+            if (set.add(tx.getHash().toHex())) {
+                //不在未确认中就进行基础验证
+                //多线程处理单个交易
+                Future<Boolean> res = verifySignExecutor.submit(new Callable<Boolean>() {
+                    @Override
+                    public Boolean call() {
+                        try {
+                            //只验证单个交易的基础内容(TX模块本地验证)
+                            TxRegister txRegister = TxManager.getTxRegister(chain, tx.getType());
+                            if (null == txRegister) {
+                                throw new NulsException(TxErrorCode.TX_TYPE_INVALID);
+                            }
+                            txService.baseValidateTx(chain, tx, txRegister);
+                        } catch (Exception e) {
+                            chain.getLogger().error("batchVerify failed, single tx verify failed. hash:{}, -type:{}", tx.getHash().toHex(), tx.getType());
+                            chain.getLogger().error(e);
+                            return false;
+                        }
+                        return true;
+                    }
+                });
+                futures.add(res);
+            }
+        }
+    }
+
+    /**
+     * 检查基础验证结果
+     */
+    private void checkbaseValidateResult(Chain chain, List<Future<Boolean>> futures) throws NulsException{
+        NulsLogger log = chain.getLogger();
+        try {
+            for (Future<Boolean> future : futures) {
+                if (!future.get()) {
+                    log.error("batchVerify failed, single tx verify failed");
+                    throw new NulsException(TxErrorCode.TX_VERIFY_FAIL);
+                }
+            }
+        } catch (InterruptedException e) {
+            log.error(e);
+            throw new NulsException(TxErrorCode.TX_VERIFY_FAIL);
+        } catch (ExecutionException e) {
+            log.error(e);
+            throw new NulsException(TxErrorCode.TX_VERIFY_FAIL);
+        }
     }
 }

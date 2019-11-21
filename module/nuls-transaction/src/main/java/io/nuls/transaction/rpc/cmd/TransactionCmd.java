@@ -2,7 +2,6 @@ package io.nuls.transaction.rpc.cmd;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import io.nuls.base.RPCUtil;
-import io.nuls.base.data.BlockHeader;
 import io.nuls.base.data.NulsHash;
 import io.nuls.base.data.Transaction;
 import io.nuls.base.protocol.TxRegisterDetail;
@@ -584,12 +583,10 @@ public class TransactionCmd extends BaseCmd {
     @Parameters(value = {
             @Parameter(parameterName = "chainId", requestType = @TypeDescriptor(value = int.class), parameterDes = "链id"),
             @Parameter(parameterName = "txList", requestType = @TypeDescriptor(value = List.class, collectionElement = String.class), parameterDes = "待验证交易序列化数据字符串集合"),
-            @Parameter(parameterName = "blockHeader", parameterType = "String", parameterDes = "对应的区块头"),
-            @Parameter(parameterName = "preStateRoot", parameterType = "String", parameterDes = "前一个区块状态根")
+            @Parameter(parameterName = "blockHeader", parameterType = "String", parameterDes = "对应的区块头")
     })
-    @ResponseData(name = "返回值", description = "返回一个Map，包含两个key", responseType = @TypeDescriptor(value = Map.class, mapKeys = {
-            @Key(name = "value", valueType = boolean.class,  description = "是否验证成功"),
-            @Key(name = "contractList", valueType = List.class, valueElement = String.class, description = "智能合约新产生的交易")
+    @ResponseData(name = "返回值", description = "返回一个Map，包含一个key", responseType = @TypeDescriptor(value = Map.class, mapKeys = {
+            @Key(name = "value", valueType = boolean.class,  description = "是否验证成功")
     }))
     public Response batchVerify(Map params) {
         VerifyLedgerResult verifyLedgerResult = null;
@@ -598,19 +595,15 @@ public class TransactionCmd extends BaseCmd {
             ObjectUtils.canNotEmpty(params.get("chainId"), TxErrorCode.PARAMETER_ERROR.getMsg());
             ObjectUtils.canNotEmpty(params.get("txList"), TxErrorCode.PARAMETER_ERROR.getMsg());
             ObjectUtils.canNotEmpty(params.get("blockHeader"), TxErrorCode.PARAMETER_ERROR.getMsg());
-            ObjectUtils.canNotEmpty(params.get("preStateRoot"), TxErrorCode.PARAMETER_ERROR.getMsg());
             chain = chainManager.getChain((Integer) params.get("chainId"));
             if (null == chain) {
                 throw new NulsException(TxErrorCode.CHAIN_NOT_FOUND);
             }
             List<String> txList = (List<String>)  params.get("txList");
-
             String blockHeaderStr = (String) params.get("blockHeader");
-            BlockHeader blockHeader = TxUtil.getInstanceRpcStr(blockHeaderStr, BlockHeader.class);
-
-            String preStateRoot = (String) params.get("preStateRoot");
-
-            Map<String, Object> resultMap = txService.batchVerify(chain, txList, blockHeader, blockHeaderStr, preStateRoot);
+            txPackageService.verifyBlockTransations(chain, txList, blockHeaderStr);
+            Map<String, Boolean> resultMap = new HashMap<>(TxConstant.INIT_CAPACITY_2);
+            resultMap.put("value", true);
             return success(resultMap);
         } catch (NulsException e) {
             errorLogProcess(chain, e);

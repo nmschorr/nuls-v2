@@ -24,7 +24,6 @@
 
 package io.nuls.transaction.rpc;
 
-import com.alibaba.druid.support.json.JSONUtils;
 import io.nuls.base.RPCUtil;
 import io.nuls.base.data.NulsHash;
 import io.nuls.base.data.Transaction;
@@ -91,7 +90,7 @@ public class PackageTest {
             params.put("endTimestamp", NulsDateUtils.getCurrentTimeMillis() + 1000);
             params.put("maxTxDataSize", 5242880);
             HashMap result = (HashMap) TransactionCall.requestAndResponse(ModuleE.TX.abbr, "tx_packableTxs", params);
-            System.out.println(JSONUtils.toJSONString(result));
+//            System.out.println(JSONUtils.toJSONString(result));
             number++;
             Thread.sleep(1000L);
         }
