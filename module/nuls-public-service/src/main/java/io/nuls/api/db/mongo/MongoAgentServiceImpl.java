@@ -44,6 +44,9 @@ public class MongoAgentServiceImpl implements AgentService {
         if (agentInfo == null) {
             Document document = mongoDBService.findOne(AGENT_TABLE + chainID, Filters.eq("_id", agentHash));
             agentInfo = DocumentTransferTool.toInfo(document, "txHash", AgentInfo.class);
+            if(agentInfo == null) {
+                return null;
+            }
             CacheManager.getCache(chainID).addAgentInfo(agentInfo);
         }
         return agentInfo.copy();

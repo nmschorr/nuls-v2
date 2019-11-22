@@ -9,6 +9,7 @@ import io.nuls.base.basic.NulsByteBuffer;
 import io.nuls.core.basic.Result;
 import io.nuls.core.core.ioc.SpringLiteContext;
 import io.nuls.core.exception.NulsException;
+import io.nuls.core.log.Log;
 import io.nuls.core.model.DateUtils;
 import io.nuls.core.rpc.util.NulsDateUtils;
 
@@ -40,6 +41,7 @@ public class UnConfirmTxTask implements Runnable {
                 if (txHexInfo.getTime() < currentTime && txHexInfo.getTime() + DateUtils.TEN_MINUTE_TIME > currentTime) {
                     Result result = WalletRpcHandler.validateTx(chainId, txHexInfo.getTxHex());
                     if (!result.isSuccess()) {
+                        LoggerUtil.commonLog.error("---validate faied, txHash: " + txHexInfo.getTxHash());
                         transactionService.deleteUnConfirmTx(chainId, txHexInfo.getTxHash());
                         txHexInfoList.remove(i);
                     } else {
